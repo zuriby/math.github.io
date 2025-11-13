@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Hyperplane in 4D Space</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 100%);
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            max-width: 300px;
+            backdrop-filter: blur(10px);
+        }
+        h2 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            color: #4fc3f7;
+        }
+        .control-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #aaa;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+        .value-display {
+            font-size: 11px;
+            color: #4fc3f7;
+            text-align: right;
+        }
+        .info {
+            font-size: 11px;
+            color: #888;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
+            line-height: 1.5;
+        }
+        button {
+            background: #4fc3f7;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            color: #0a0a1a;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+        button:hover {
+            background: #81d4fa;
+        }
+        #equation {
+            background: rgba(79, 195, 247, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            margin-top: 10px;
+            color: #4fc3f7;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="controls">
+        <h2>4D Hyperplane Visualizer</h2>
+        
+        <div class="control-group">
+            <label>4D Rotation (XY plane)</label>
+            <input type="range" id="rotXY" min="0" max="360" value="0" step="1">
+            <div class="value-display"><span id="rotXY-val">0</span>°</div>
+        </div>
+        
+        <div class="control-group">
+            <label>4D Rotation (ZW plane)</label>
+            <input type="range" id="rotZW" min="0" max="360" value="45" step="1">
+            <div class="value-display"><span id="rotZW-val">45</span>°</div>
+        </div>
+        
+        <div class="control-group">
+            <label>4D Rotation (XW plane)</label>
+            <input type="range" id="rotXW" min="0" max="360" value="30" step="1">
+            <div class="value-display"><span id="rotXW-val">30</span>°</div>
+        </div>
+        
+        <div class="control-group">
+            <label>Grid Density</label>
+            <input type="range" id="density" min="10" max="40" value="25" step="1">
+            <div class="value-display"><span id="density-val">25</span></div>
+        </div>
+        
+        <button id="animate">Toggle Animation</button>
+        
+        <div id="equation">
+            Hyperplane: w = 0<br>
+            Dimension: 3D subspace of ℝ⁴
+        </div>
+        
+        <div class="info">
+            <strong>What you're seeing:</strong><br>
+            A 3D hyperplane in 4D space, projected into 3D using stereographic projection. The hyperplane passes through the origin and has equation w = 0.<br><br>
+            <strong>Controls:</strong> Rotate the hyperplane in 4D space to see different "views" of how it intersects with our 3D perception.
+            <hr />
+            <img src="IMG_9344.png" width="300px">
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x0a0a1a, 1);
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        camera.position.set(3, 2, 4);
+        camera.lookAt(0, 0, 0);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 2);
+        scene.add(ambientLight);
+        
+        const pointLight1 = new THREE.PointLight(0x4fc3f7, 1, 100);
+        pointLight1.position.set(5, 5, 5);
+        scene.add(pointLight1);
+        
+        const pointLight2 = new THREE.PointLight(0xff4081, 0.5, 100);
+        pointLight2.position.set(-5, -5, -5);
+        scene.add(pointLight2);
+
+        // Add coordinate axes
+        const axesHelper = new THREE.AxesHelper(2);
+        scene.add(axesHelper);
+
+        // 4D rotation matrices
+        function rotate4D_XY(point, angle) {
+            const c = Math.cos(angle);
+            const s = Math.sin(angle);
+            return [
+                c * point[0] - s * point[1],
+                s * point[0] + c * point[1],
+                point[2],
+                point[3]
+            ];
+        }
+
+        function rotate4D_ZW(point, angle) {
+            const c = Math.cos(angle);
+            const s = Math.sin(angle);
+            return [
+                point[0],
+                point[1],
+                c * point[2] - s * point[3],
+                s * point[2] + c * point[3]
+            ];
+        }
+
+        function rotate4D_XW(point, angle) {
+            const c = Math.cos(angle);
+            const s = Math.sin(angle);
+            return [
+                c * point[0] - s * point[3],
+                point[1],
+                point[2],
+                s * point[0] + c * point[3]
+            ];
+        }
+
+        // Stereographic projection from 4D to 3D
+        function stereographicProject(point4D) {
+            const [x, y, z, w] = point4D;
+            const denom = 1 - w;
+            
+            // Avoid division by zero
+            if (Math.abs(denom) < 0.01) {
+                return [x * 10, y * 10, z * 10];
+            }
+            
+            return [
+                x / denom,
+                y / denom,
+                z / denom
+            ];
+        }
+
+        let hyperplaneGroup = new THREE.Group();
+        scene.add(hyperplaneGroup);
+
+        function createHyperplane(density, rotXY, rotZW, rotXW) {
+            // Clear previous hyperplane
+            while(hyperplaneGroup.children.length > 0) {
+                hyperplaneGroup.remove(hyperplaneGroup.children[0]);
+            }
+
+            const range = 2;
+            const step = (2 * range) / density;
+
+            // Create grid points on the hyperplane w = 0
+            const points = [];
+            const colors = [];
+            
+            for (let i = 0; i <= density; i++) {
+                for (let j = 0; j <= density; j++) {
+                    for (let k = 0; k <= density; k++) {
+                        const x = -range + i * step;
+                        const y = -range + j * step;
+                        const z = -range + k * step;
+                        const w = 0; // Hyperplane equation: w = 0
+                        
+                        // Apply 4D rotations
+                        let point = [x, y, z, w];
+                        point = rotate4D_XY(point, rotXY);
+                        point = rotate4D_ZW(point, rotZW);
+                        point = rotate4D_XW(point, rotXW);
+                        
+                        // Project to 3D
+                        const projected = stereographicProject(point);
+                        
+                        // Only add points that project reasonably
+                        if (Math.abs(projected[0]) < 10 && 
+                            Math.abs(projected[1]) < 10 && 
+                            Math.abs(projected[2]) < 10) {
+                            points.push(new THREE.Vector3(...projected));
+                            
+                            // Color based on original 4D position
+                            const dist = Math.sqrt(x*x + y*y + z*z) / (range * Math.sqrt(3));
+                            colors.push(new THREE.Color().setHSL(0.55 + dist * 0.2, 0.8, 0.5));
+                        }
+                    }
+                }
+            }
+
+            // Create point cloud
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const colorArray = new Float32Array(colors.length * 3);
+            colors.forEach((color, i) => {
+                colorArray[i * 3] = color.r;
+                colorArray[i * 3 + 1] = color.g;
+                colorArray[i * 3 + 2] = color.b;
+            });
+            geometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.05,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+
+            const pointCloud = new THREE.Points(geometry, material);
+            hyperplaneGroup.add(pointCloud);
+
+            // Add mesh surface
+            const meshGeometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const meshColors = [];
+            
+            const meshDensity = Math.min(density, 20);
+            const meshStep = (2 * range) / meshDensity;
+            
+            for (let i = 0; i < meshDensity; i++) {
+                for (let j = 0; j < meshDensity; j++) {
+                    for (let k = 0; k < meshDensity; k++) {
+                        const x = -range + i * meshStep;
+                        const y = -range + j * meshStep;
+                        const z = -range + k * meshStep;
+                        
+                        // Create small triangles
+                        let p1 = [x, y, z, 0];
+                        let p2 = [x + meshStep, y, z, 0];
+                        let p3 = [x, y + meshStep, z, 0];
+                        
+                        p1 = rotate4D_XY(p1, rotXY);
+                        p1 = rotate4D_ZW(p1, rotZW);
+                        p1 = rotate4D_XW(p1, rotXW);
+                        
+                        p2 = rotate4D_XY(p2, rotXY);
+                        p2 = rotate4D_ZW(p2, rotZW);
+                        p2 = rotate4D_XW(p2, rotXW);
+                        
+                        p3 = rotate4D_XY(p3, rotXY);
+                        p3 = rotate4D_ZW(p3, rotZW);
+                        p3 = rotate4D_XW(p3, rotXW);
+                        
+                        const proj1 = stereographicProject(p1);
+                        const proj2 = stereographicProject(p2);
+                        const proj3 = stereographicProject(p3);
+                        
+                        if (proj1.every(v => Math.abs(v) < 10) &&
+                            proj2.every(v => Math.abs(v) < 10) &&
+                            proj3.every(v => Math.abs(v) < 10)) {
+                            vertices.push(...proj1, ...proj2, ...proj3);
+                            
+                            const color = new THREE.Color().setHSL(0.55, 0.7, 0.5);
+                            meshColors.push(color.r, color.g, color.b);
+                            meshColors.push(color.r, color.g, color.b);
+                            meshColors.push(color.r, color.g, color.b);
+                        }
+                    }
+                }
+            }
+            
+            meshGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            meshGeometry.setAttribute('color', new THREE.Float32BufferAttribute(meshColors, 3));
+            meshGeometry.computeVertexNormals();
+            
+            const meshMaterial = new THREE.MeshPhongMaterial({
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.2,
+                side: THREE.DoubleSide,
+                shininess: 30
+            });
+            
+            const mesh = new THREE.Mesh(meshGeometry, meshMaterial);
+            hyperplaneGroup.add(mesh);
+        }
+
+        // Controls
+        const rotXYSlider = document.getElementById('rotXY');
+        const rotZWSlider = document.getElementById('rotZW');
+        const rotXWSlider = document.getElementById('rotXW');
+        const densitySlider = document.getElementById('density');
+        const animateButton = document.getElementById('animate');
+
+        let isAnimating = false;
+        let animationTime = 0;
+
+        function updateHyperplane() {
+            const rotXY = parseFloat(rotXYSlider.value) * Math.PI / 180;
+            const rotZW = parseFloat(rotZWSlider.value) * Math.PI / 180;
+            const rotXW = parseFloat(rotXWSlider.value) * Math.PI / 180;
+            const density = parseInt(densitySlider.value);
+            
+            document.getElementById('rotXY-val').textContent = rotXYSlider.value;
+            document.getElementById('rotZW-val').textContent = rotZWSlider.value;
+            document.getElementById('rotXW-val').textContent = rotXWSlider.value;
+            document.getElementById('density-val').textContent = density;
+            
+            createHyperplane(density, rotXY, rotZW, rotXW);
+        }
+
+        rotXYSlider.addEventListener('input', updateHyperplane);
+        rotZWSlider.addEventListener('input', updateHyperplane);
+        rotXWSlider.addEventListener('input', updateHyperplane);
+        densitySlider.addEventListener('input', updateHyperplane);
+
+        animateButton.addEventListener('click', () => {
+            isAnimating = !isAnimating;
+            animateButton.textContent = isAnimating ? 'Stop Animation' : 'Toggle Animation';
+        });
+
+        // Initial creation
+        updateHyperplane();
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (isAnimating) {
+                animationTime += 0.005;
+                rotXYSlider.value = Math.sin(animationTime) * 180;
+                rotZWSlider.value = Math.cos(animationTime * 0.7) * 180;
+                rotXWSlider.value = Math.sin(animationTime * 0.5) * 90;
+                updateHyperplane();
+            }
+            
+            // Gentle camera rotation
+            const time = Date.now() * 0.0001;
+            camera.position.x = Math.cos(time) * 5;
+            camera.position.z = Math.sin(time) * 5;
+            camera.lookAt(0, 0, 0);
+            
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

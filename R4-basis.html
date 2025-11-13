@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basis for ℝ⁴ - Full 4D Space</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #2a1a3a 100%);
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            max-width: 350px;
+            backdrop-filter: blur(10px);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        h2 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            color: #ab47bc;
+        }
+        h3 {
+            margin: 15px 0 10px 0;
+            font-size: 14px;
+            color: #ce93d8;
+        }
+        .control-group {
+            margin: 12px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #aaa;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+        .value-display {
+            font-size: 11px;
+            color: #ab47bc;
+            text-align: right;
+        }
+        .basis-vector {
+            background: rgba(171, 71, 188, 0.1);
+            padding: 8px;
+            border-radius: 5px;
+            margin: 8px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+        .vector-component {
+            color: #ce93d8;
+        }
+        button {
+            background: #ab47bc;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px 5px 5px 0;
+            font-size: 12px;
+        }
+        button:hover {
+            background: #ce93d8;
+        }
+        .info {
+            font-size: 11px;
+            color: #888;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
+            line-height: 1.5;
+        }
+        .highlight {
+            color: #ab47bc;
+            font-weight: bold;
+        }
+        #linear-combo {
+            background: rgba(171, 71, 188, 0.15);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            margin-top: 10px;
+            color: #ce93d8;
+            line-height: 1.6;
+        }
+        .dimension-label {
+            display: inline-block;
+            background: rgba(171, 71, 188, 0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            margin: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="controls">
+        <h2>Basis for ℝ⁴ Visualizer</h2>
+        
+        <div class="info" style="margin-top: 0; padding-top: 0; border-top: none;">
+            <strong class="highlight">Key Concept:</strong> These 4 vectors form a basis, meaning they span <strong>ALL of ℝ⁴</strong>. Every point in 4D space can be expressed as their linear combination!
+        </div>
+
+        <h3>Basis Vectors (Standard Basis)</h3>
+        <div class="basis-vector">
+            e₁ = <span class="vector-component">(1, 0, 0, 0)</span>
+            <span class="dimension-label">x-axis</span>
+        </div>
+        <div class="basis-vector">
+            e₂ = <span class="vector-component">(0, 1, 0, 0)</span>
+            <span class="dimension-label">y-axis</span>
+        </div>
+        <div class="basis-vector">
+            e₃ = <span class="vector-component">(0, 0, 1, 0)</span>
+            <span class="dimension-label">z-axis</span>
+        </div>
+        <div class="basis-vector">
+            e₄ = <span class="vector-component">(0, 0, 0, 1)</span>
+            <span class="dimension-label">w-axis</span>
+        </div>
+
+        <h3>Create Any Point in ℝ⁴</h3>
+        <div class="control-group">
+            <label>c₁ (weight on e₁)</label>
+            <input type="range" id="c1" min="-2" max="2" value="1" step="0.1">
+            <div class="value-display"><span id="c1-val">1.0</span></div>
+        </div>
+        
+        <div class="control-group">
+            <label>c₂ (weight on e₂)</label>
+            <input type="range" id="c2" min="-2" max="2" value="0.5" step="0.1">
+            <div class="value-display"><span id="c2-val">0.5</span></div>
+        </div>
+        
+        <div class="control-group">
+            <label>c₃ (weight on e₃)</label>
+            <input type="range" id="c3" min="-2" max="2" value="0.8" step="0.1">
+            <div class="value-display"><span id="c3-val">0.8</span></div>
+        </div>
+        
+        <div class="control-group">
+            <label>c₄ (weight on e₄)</label>
+            <input type="range" id="c4" min="-2" max="2" value="0.3" step="0.1">
+            <div class="value-display"><span id="c4-val">0.3</span></div>
+        </div>
+
+        <div id="linear-combo">
+            <strong>Point in ℝ⁴:</strong><br>
+            p = c₁e₁ + c₂e₂ + c₃e₃ + c₄e₄<br>
+            p = <span id="result-vector">(1.0, 0.5, 0.8, 0.3)</span>
+        </div>
+
+        <h3>4D Space Controls</h3>
+        
+        <div class="control-group">
+            <label>4D Rotation Speed</label>
+            <input type="range" id="rotSpeed" min="0" max="2" value="0.5" step="0.1">
+            <div class="value-display"><span id="rotSpeed-val">0.5</span></div>
+        </div>
+        
+        <div class="control-group">
+            <label>Grid Density</label>
+            <input type="range" id="density" min="3" max="8" value="5" step="1">
+            <div class="value-display"><span id="density-val">5</span></div>
+        </div>
+
+        <button id="toggleGrid">Toggle 4D Grid</button>
+        <button id="toggleBasis">Toggle Basis Vectors</button>
+        <button id="randomPoint">Random Point</button>
+
+        <div class="info">
+            <strong>What you're seeing:</strong><br>
+            • <span class="highlight">4 basis vectors</span> (shown as colored arrows)<br>
+            • <span class="highlight">4D grid structure</span> projected to 3D<br>
+            • <span class="highlight">Your custom point</span> (purple sphere)<br>
+            • The space <span class="highlight">continuously rotates in 4D</span><br><br>
+            
+            <strong>The Magic:</strong><br>
+            Unlike the 3D hyperplane (which was a subset), this basis spans <strong>everything</strong>. Any point you can imagine in 4D space = some combination of these 4 vectors!<br><br>
+            
+            <strong>Dimension:</strong> dim(span{e₁, e₂, e₃, e₄}) = 4<br>
+            span{e₁, e₂, e₃, e₄} = ℝ⁴ <span class="highlight">✓</span>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x0a0a1a, 1);
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        camera.position.set(5, 3, 5);
+        camera.lookAt(0, 0, 0);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 1.5);
+        scene.add(ambientLight);
+        
+        const pointLight1 = new THREE.PointLight(0xab47bc, 1.5, 100);
+        pointLight1.position.set(5, 5, 5);
+        scene.add(pointLight1);
+        
+        const pointLight2 = new THREE.PointLight(0x4fc3f7, 0.8, 100);
+        pointLight2.position.set(-5, 3, -3);
+        scene.add(pointLight2);
+
+        const pointLight3 = new THREE.PointLight(0xff4081, 0.6, 100);
+        pointLight3.position.set(0, -5, 5);
+        scene.add(pointLight3);
+
+        // 4D rotation matrices
+        function rotate4D_XW(point, angle) {
+            const c = Math.cos(angle);
+            const s = Math.sin(angle);
+            return [
+                c * point[0] - s * point[3],
+                point[1],
+                point[2],
+                s * point[0] + c * point[3]
+            ];
+        }
+
+        function rotate4D_YW(point, angle) {
+            const c = Math.cos(angle);
+            const s = Math.sin(angle);
+            return [
+                point[0],
+                c * point[1] - s * point[3],
+                point[2],
+                s * point[1] + c * point[3]
+            ];
+        }
+
+        function rotate4D_ZW(point, angle) {
+            const c = Math.cos(angle);
+            const s = Math.sin(angle);
+            return [
+                point[0],
+                point[1],
+                c * point[2] - s * point[3],
+                s * point[2] + c * point[3]
+            ];
+        }
+
+        // Stereographic projection
+        function stereographicProject(point4D) {
+            const [x, y, z, w] = point4D;
+            const r = 2.5; // projection radius
+            const denom = r - w;
+            
+            if (Math.abs(denom) < 0.1) {
+                return [x * 5, y * 5, z * 5];
+            }
+            
+            return [
+                r * x / denom,
+                r * y / denom,
+                r * z / denom
+            ];
+        }
+
+        let gridGroup = new THREE.Group();
+        let basisGroup = new THREE.Group();
+        let pointGroup = new THREE.Group();
+        scene.add(gridGroup);
+        scene.add(basisGroup);
+        scene.add(pointGroup);
+
+        let showGrid = true;
+        let showBasis = true;
+        let time4D = 0;
+
+        // Create basis vectors
+        function createBasisVectors(rotation) {
+            while(basisGroup.children.length > 0) {
+                basisGroup.remove(basisGroup.children[0]);
+            }
+
+            const basisVectors = [
+                [2, 0, 0, 0],
+                [0, 2, 0, 0],
+                [0, 0, 2, 0],
+                [0, 0, 0, 2]
+            ];
+
+            const colors = [0xff5252, 0x66bb6a, 0x42a5f5, 0xffa726];
+            const labels = ['e₁ (x)', 'e₂ (y)', 'e₃ (z)', 'e₄ (w)'];
+
+            basisVectors.forEach((vec, i) => {
+                let rotated = rotate4D_XW(vec, rotation.xw);
+                rotated = rotate4D_YW(rotated, rotation.yw);
+                rotated = rotate4D_ZW(rotated, rotation.zw);
+                
+                const projected = stereographicProject(rotated);
+                
+                // Create arrow
+                const dir = new THREE.Vector3(...projected).normalize();
+                const length = new THREE.Vector3(...projected).length();
+                const arrow = new THREE.ArrowHelper(
+                    dir,
+                    new THREE.Vector3(0, 0, 0),
+                    length,
+                    colors[i],
+                    length * 0.2,
+                    length * 0.15
+                );
+                basisGroup.add(arrow);
+
+                // Add sphere at tip
+                const sphereGeom = new THREE.SphereGeometry(0.1, 16, 16);
+                const sphereMat = new THREE.MeshPhongMaterial({ 
+                    color: colors[i],
+                    emissive: colors[i],
+                    emissiveIntensity: 0.3
+                });
+                const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+                sphere.position.set(...projected);
+                basisGroup.add(sphere);
+            });
+
+            basisGroup.visible = showBasis;
+        }
+
+        // Create 4D grid structure
+        function create4DGrid(density, rotation) {
+            while(gridGroup.children.length > 0) {
+                gridGroup.remove(gridGroup.children[0]);
+            }
+
+            const range = 1.5;
+            const step = (2 * range) / density;
+
+            // Create grid lines spanning all 4 dimensions
+            const points = [];
+            const colors = [];
+
+            // Generate grid lines in each pair of dimensions
+            for (let dim1 = 0; dim1 < 4; dim1++) {
+                for (let dim2 = dim1 + 1; dim2 < 4; dim2++) {
+                    for (let i = 0; i <= density; i++) {
+                        for (let j = 0; j <= density; j++) {
+                            const t1 = -range + i * step;
+                            const t2 = -range + j * step;
+                            
+                            for (let k = 0; k <= density; k++) {
+                                const s = -range + k * step;
+                                
+                                let point = [0, 0, 0, 0];
+                                point[dim1] = t1;
+                                point[dim2] = s;
+                                
+                                // Fix other dimensions
+                                for (let d = 0; d < 4; d++) {
+                                    if (d !== dim1 && d !== dim2) {
+                                        point[d] = t2;
+                                    }
+                                }
+                                
+                                let rotated = rotate4D_XW(point, rotation.xw);
+                                rotated = rotate4D_YW(rotated, rotation.yw);
+                                rotated = rotate4D_ZW(rotated, rotation.zw);
+                                
+                                const projected = stereographicProject(rotated);
+                                
+                                if (projected.every(v => Math.abs(v) < 15)) {
+                                    points.push(new THREE.Vector3(...projected));
+                                    
+                                    // Color based on which dimensions
+                                    const hue = (dim1 + dim2) / 6;
+                                    colors.push(new THREE.Color().setHSL(hue, 0.6, 0.5));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const colorArray = new Float32Array(colors.length * 3);
+            colors.forEach((color, i) => {
+                colorArray[i * 3] = color.r;
+                colorArray[i * 3 + 1] = color.g;
+                colorArray[i * 3 + 2] = color.b;
+            });
+            geometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.03,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.4,
+                blending: THREE.AdditiveBlending
+            });
+
+            const pointCloud = new THREE.Points(geometry, material);
+            gridGroup.add(pointCloud);
+            gridGroup.visible = showGrid;
+        }
+
+        // Create the user-defined point
+        function createPoint(c1, c2, c3, c4, rotation) {
+            while(pointGroup.children.length > 0) {
+                pointGroup.remove(pointGroup.children[0]);
+            }
+
+            // The point in 4D is just the linear combination
+            const point4D = [c1, c2, c3, c4];
+            
+            let rotated = rotate4D_XW(point4D, rotation.xw);
+            rotated = rotate4D_YW(rotated, rotation.yw);
+            rotated = rotate4D_ZW(rotated, rotation.zw);
+            
+            const projected = stereographicProject(rotated);
+
+            // Main point sphere
+            const sphereGeom = new THREE.SphereGeometry(0.15, 32, 32);
+            const sphereMat = new THREE.MeshPhongMaterial({
+                color: 0xab47bc,
+                emissive: 0xab47bc,
+                emissiveIntensity: 0.5,
+                shininess: 100
+            });
+            const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+            sphere.position.set(...projected);
+            pointGroup.add(sphere);
+
+            // Glow effect
+            const glowGeom = new THREE.SphereGeometry(0.25, 32, 32);
+            const glowMat = new THREE.MeshBasicMaterial({
+                color: 0xab47bc,
+                transparent: true,
+                opacity: 0.2
+            });
+            const glow = new THREE.Mesh(glowGeom, glowMat);
+            glow.position.set(...projected);
+            pointGroup.add(glow);
+
+            // Line from origin to point
+            const lineGeom = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(...projected)
+            ]);
+            const lineMat = new THREE.LineBasicMaterial({
+                color: 0xab47bc,
+                transparent: true,
+                opacity: 0.6,
+                linewidth: 2
+            });
+            const line = new THREE.Line(lineGeom, lineMat);
+            pointGroup.add(line);
+        }
+
+        // Controls
+        const c1Slider = document.getElementById('c1');
+        const c2Slider = document.getElementById('c2');
+        const c3Slider = document.getElementById('c3');
+        const c4Slider = document.getElementById('c4');
+        const densitySlider = document.getElementById('density');
+        const rotSpeedSlider = document.getElementById('rotSpeed');
+        const toggleGridBtn = document.getElementById('toggleGrid');
+        const toggleBasisBtn = document.getElementById('toggleBasis');
+        const randomPointBtn = document.getElementById('randomPoint');
+
+        let rotationSpeed = 0.5;
+
+        function updateScene() {
+            const c1 = parseFloat(c1Slider.value);
+            const c2 = parseFloat(c2Slider.value);
+            const c3 = parseFloat(c3Slider.value);
+            const c4 = parseFloat(c4Slider.value);
+            const density = parseInt(densitySlider.value);
+            rotationSpeed = parseFloat(rotSpeedSlider.value);
+            
+            document.getElementById('c1-val').textContent = c1.toFixed(1);
+            document.getElementById('c2-val').textContent = c2.toFixed(1);
+            document.getElementById('c3-val').textContent = c3.toFixed(1);
+            document.getElementById('c4-val').textContent = c4.toFixed(1);
+            document.getElementById('density-val').textContent = density;
+            document.getElementById('rotSpeed-val').textContent = rotationSpeed.toFixed(1);
+            document.getElementById('result-vector').textContent = 
+                `(${c1.toFixed(1)}, ${c2.toFixed(1)}, ${c3.toFixed(1)}, ${c4.toFixed(1)})`;
+            
+            const rotation = {
+                xw: time4D * rotationSpeed,
+                yw: time4D * rotationSpeed * 0.7,
+                zw: time4D * rotationSpeed * 0.5
+            };
+            
+            create4DGrid(density, rotation);
+            createBasisVectors(rotation);
+            createPoint(c1, c2, c3, c4, rotation);
+        }
+
+        c1Slider.addEventListener('input', updateScene);
+        c2Slider.addEventListener('input', updateScene);
+        c3Slider.addEventListener('input', updateScene);
+        c4Slider.addEventListener('input', updateScene);
+        densitySlider.addEventListener('input', updateScene);
+        rotSpeedSlider.addEventListener('input', updateScene);
+
+        toggleGridBtn.addEventListener('click', () => {
+            showGrid = !showGrid;
+            gridGroup.visible = showGrid;
+        });
+
+        toggleBasisBtn.addEventListener('click', () => {
+            showBasis = !showBasis;
+            basisGroup.visible = showBasis;
+        });
+
+        randomPointBtn.addEventListener('click', () => {
+            c1Slider.value = (Math.random() * 4 - 2).toFixed(1);
+            c2Slider.value = (Math.random() * 4 - 2).toFixed(1);
+            c3Slider.value = (Math.random() * 4 - 2).toFixed(1);
+            c4Slider.value = (Math.random() * 4 - 2).toFixed(1);
+            updateScene();
+        });
+
+        // Initial setup
+        updateScene();
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            time4D += 0.005;
+            updateScene();
+            
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Mouse interaction for camera
+        let mouseDown = false;
+        let mouseX = 0;
+        let mouseY = 0;
+
+        document.addEventListener('mousedown', (e) => {
+            mouseDown = true;
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        document.addEventListener('mouseup', () => {
+            mouseDown = false;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (mouseDown) {
+                const deltaX = e.clientX - mouseX;
+                const deltaY = e.clientY - mouseY;
+                
+                const phi = deltaY * 0.01;
+                const theta = deltaX * 0.01;
+                
+                const radius = Math.sqrt(
+                    camera.position.x ** 2 + 
+                    camera.position.y ** 2 + 
+                    camera.position.z ** 2
+                );
+                
+                const currentPhi = Math.acos(camera.position.y / radius);
+                const currentTheta = Math.atan2(camera.position.z, camera.position.x);
+                
+                const newPhi = Math.max(0.1, Math.min(Math.PI - 0.1, currentPhi + phi));
+                const newTheta = currentTheta + theta;
+                
+                camera.position.x = radius * Math.sin(newPhi) * Math.cos(newTheta);
+                camera.position.y = radius * Math.cos(newPhi);
+                camera.position.z = radius * Math.sin(newPhi) * Math.sin(newTheta);
+                camera.lookAt(0, 0, 0);
+                
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            }
+        });
+    </script>
+</body>
+</html>
