@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Algebra Geometry Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 100%);
+            color: white;
+            overflow-x: hidden;
+        }
+        
+        #main-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .view-container {
+            flex: 1;
+            position: relative;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .view-container:last-child {
+            border-right: none;
+        }
+        
+        .view-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .column-space-label {
+            color: #4fc3f7;
+            border-color: #4fc3f7;
+        }
+        
+        .null-space-label {
+            color: #ab47bc;
+            border-color: #ab47bc;
+        }
+        
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 25px 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            min-width: 600px;
+        }
+        
+        #controls.collapsed {
+            padding: 15px 20px;
+            min-width: auto;
+        }
+        
+        .controls-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        #controls.collapsed .controls-header {
+            margin-bottom: 0;
+        }
+        
+        .controls-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        #controls.collapsed .controls-content {
+            display: none;
+        }
+        
+        h2 {
+            font-size: 18px;
+            background: linear-gradient(90deg, #4fc3f7, #ab47bc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .toggle-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 5px 15px;
+            border-radius: 15px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        
+        .toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .param-group {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .param-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .param-name {
+            font-size: 13px;
+            color: #aaa;
+        }
+        
+        .param-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #4fc3f7;
+            font-family: 'Courier New', monospace;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4fc3f7, #ab47bc);
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(79, 195, 247, 0.5);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4fc3f7, #ab47bc);
+            cursor: pointer;
+            border: none;
+        }
+        
+        .derived-info {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(79, 195, 247, 0.1), rgba(171, 71, 188, 0.1));
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 12px;
+            line-height: 1.8;
+        }
+        
+        .derived-label {
+            color: #888;
+            display: inline-block;
+            min-width: 180px;
+        }
+        
+        .derived-value {
+            color: #4fc3f7;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .highlight {
+            color: #ab47bc;
+            font-weight: bold;
+        }
+        
+        .equation {
+            font-family: 'Courier New', monospace;
+            color: #ce93d8;
+        }
+        
+        .button-group {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        button {
+            flex: 1;
+            background: linear-gradient(135deg, #4fc3f7, #ab47bc);
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 195, 247, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        #info-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 11px;
+            max-width: 250px;
+            line-height: 1.6;
+            z-index: 90;
+        }
+        
+        .info-title {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4fc3f7;
+        }
+        
+        .warning {
+            color: #ff9800;
+            font-style: italic;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="main-container">
+        <div class="view-container" id="column-space-view">
+            <div class="view-label column-space-label">Column Space (Image)</div>
+        </div>
+        <div class="view-container" id="null-space-view">
+            <div class="view-label null-space-label">Null Space (Kernel)</div>
+        </div>
+    </div>
+    
+    <div id="info-panel">
+        <div class="info-title">The Rank-Nullity Theorem</div>
+        <div style="color: #888;">
+            For a matrix A: ℝⁿ → ℝᵐ<br><br>
+            <span class="equation">dim(Col A) + dim(Nul A) = n</span><br><br>
+            <span style="color: #4fc3f7;">Left view:</span> Where A maps <strong>to</strong><br>
+            <span style="color: #ab47bc;">Right view:</span> What A maps to <strong>zero</strong>
+        </div>
+        <div class="warning" id="warning-text"></div>
+    </div>
+    
+    <div id="controls">
+        <div class="controls-header">
+            <h2>Matrix Geometry Parameters</h2>
+            <button class="toggle-btn" id="collapse-btn">Collapse</button>
+        </div>
+        <div class="controls-content">
+            <div class="param-group">
+                <div class="param-label">
+                    <span class="param-name">Ambient Space Dimension (n)</span>
+                    <span class="param-value" id="n-val">4</span>
+                </div>
+                <input type="range" id="n-slider" min="2" max="6" value="4" step="1">
+            </div>
+            
+            <div class="param-group">
+                <div class="param-label">
+                    <span class="param-name">Number of Columns (m)</span>
+                    <span class="param-value" id="m-val">3</span>
+                </div>
+                <input type="range" id="m-slider" min="1" max="6" value="3" step="1">
+            </div>
+            
+            <div class="param-group">
+                <div class="param-label">
+                    <span class="param-name">Rank r(A)</span>
+                    <span class="param-value" id="r-val">3</span>
+                </div>
+                <input type="range" id="r-slider" min="1" max="4" value="3" step="1">
+            </div>
+            
+            <div class="param-group">
+                <div class="param-label">
+                    <span class="param-name">Rotation Speed</span>
+                    <span class="param-value" id="speed-val">0.5</span>
+                </div>
+                <input type="range" id="speed-slider" min="0" max="2" value="0.5" step="0.1">
+            </div>
+            
+            <div class="derived-info">
+                <div><span class="derived-label">Column Space Dimension:</span> <span class="derived-value" id="col-dim">r(A) = 3</span></div>
+                <div><span class="derived-label">Null Space Dimension:</span> <span class="derived-value" id="null-dim">m - r(A) = 0</span></div>
+                <div><span class="derived-label">Free Variables:</span> <span class="derived-value" id="free-vars">0</span></div>
+                <div><span class="derived-label">Geometric Interpretation:</span> <span class="highlight" id="interpretation">3D hyperplane in ℝ⁴ | Point (trivial)</span></div>
+            </div>
+            
+            <div class="button-group">
+                <button id="preset-hyperplane">3D Hyperplane in ℝ⁴</button>
+                <button id="preset-line">Line & Plane</button>
+                <button id="preset-trivial">Full Rank</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ============================================
+        // DUAL SCENE SETUP
+        // ============================================
+        
+        // Column Space Scene
+        const colScene = new THREE.Scene();
+        const colCamera = new THREE.PerspectiveCamera(75, window.innerWidth / 2 / window.innerHeight, 0.1, 1000);
+        const colRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        colRenderer.setSize(window.innerWidth / 2, window.innerHeight);
+        colRenderer.setClearColor(0x0a0a1a, 1);
+        document.getElementById('column-space-view').appendChild(colRenderer.domElement);
+        colCamera.position.set(4, 3, 5);
+        colCamera.lookAt(0, 0, 0);
+        
+        // Null Space Scene
+        const nullScene = new THREE.Scene();
+        const nullCamera = new THREE.PerspectiveCamera(75, window.innerWidth / 2 / window.innerHeight, 0.1, 1000);
+        const nullRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        nullRenderer.setSize(window.innerWidth / 2, window.innerHeight);
+        nullRenderer.setClearColor(0x0a0a1a, 1);
+        document.getElementById('null-space-view').appendChild(nullRenderer.domElement);
+        nullCamera.position.set(4, 3, 5);
+        nullCamera.lookAt(0, 0, 0);
+        
+        // Lighting for Column Space
+        const colAmbient = new THREE.AmbientLight(0x404040, 1.5);
+        colScene.add(colAmbient);
+        const colLight1 = new THREE.PointLight(0x4fc3f7, 2, 100);
+        colLight1.position.set(5, 5, 5);
+        colScene.add(colLight1);
+        const colLight2 = new THREE.PointLight(0x81d4fa, 1, 100);
+        colLight2.position.set(-5, -3, -5);
+        colScene.add(colLight2);
+        
+        // Lighting for Null Space
+        const nullAmbient = new THREE.AmbientLight(0x404040, 1.5);
+        nullScene.add(nullAmbient);
+        const nullLight1 = new THREE.PointLight(0xab47bc, 2, 100);
+        nullLight1.position.set(5, 5, 5);
+        nullScene.add(nullLight1);
+        const nullLight2 = new THREE.PointLight(0xce93d8, 1, 100);
+        nullLight2.position.set(-5, -3, -5);
+        nullScene.add(nullLight2);
+        
+        // Axes
+        const colAxes = new THREE.AxesHelper(2);
+        colScene.add(colAxes);
+        const nullAxes = new THREE.AxesHelper(2);
+        nullScene.add(nullAxes);
+        
+        // Groups for geometry
+        let colGroup = new THREE.Group();
+        let nullGroup = new THREE.Group();
+        colScene.add(colGroup);
+        nullScene.add(nullGroup);
+        
+        // ============================================
+        // 4D MATHEMATICS
+        // ============================================
+        
+        function rotate4D_XW(point, angle) {
+            const c = Math.cos(angle);
+            const s = Math.sin(angle);
+            return [
+                c * point[0] - s * point[3],
+                point[1],
+                point[2],
+                s * point[0] + c * point[3]
+            ];
+        }
+        
+        function rotate4D_YW(point, angle) {
+            const c = Math.cos(angle);
+            const s = Math.sin(angle);
+            return [
+                point[0],
+                c * point[1] - s * point[3],
+                point[2],
+                s * point[1] + c * point[3]
+            ];
+        }
+        
+        function rotate4D_ZW(point, angle) {
+            const c = Math.cos(angle);
+            const s = Math.sin(angle);
+            return [
+                point[0],
+                point[1],
+                c * point[2] - s * point[3],
+                s * point[2] + c * point[3]
+            ];
+        }
+        
+        function stereographicProject(point, dim) {
+            if (dim <= 3) {
+                return point.slice(0, 3);
+            }
+            
+            const r = 2.5;
+            const w = point[3] || 0;
+            const denom = r - w;
+            
+            if (Math.abs(denom) < 0.1) {
+                return [point[0] * 5, point[1] * 5, point[2] * 5];
+            }
+            
+            return [
+                r * point[0] / denom,
+                r * point[1] / denom,
+                r * point[2] / denom
+            ];
+        }
+        
+        // ============================================
+        // GEOMETRY CREATION
+        // ============================================
+        
+        function createSubspace(scene, group, dimension, color, rotation) {
+            // Clear previous
+            while(group.children.length > 0) {
+                group.remove(group.children[0]);
+            }
+            
+            if (dimension === 0) {
+                // Point at origin
+                const geom = new THREE.SphereGeometry(0.15, 32, 32);
+                const mat = new THREE.MeshPhongMaterial({
+                    color: color,
+                    emissive: color,
+                    emissiveIntensity: 0.5
+                });
+                const sphere = new THREE.Mesh(geom, mat);
+                group.add(sphere);
+                return;
+            }
+            
+            const range = 2;
+            const density = 20;
+            const step = (2 * range) / density;
+            
+            const points = [];
+            const colors = [];
+            
+            if (dimension === 1) {
+                // Line through origin
+                for (let i = 0; i <= density * 2; i++) {
+                    const t = -range + i * step / 2;
+                    let point = [t, 0, 0, 0];
+                    
+                    point = rotate4D_XW(point, rotation.xw);
+                    point = rotate4D_YW(point, rotation.yw);
+                    point = rotate4D_ZW(point, rotation.zw);
+                    
+                    const proj = stereographicProject(point, 4);
+                    if (proj.every(v => Math.abs(v) < 10)) {
+                        points.push(new THREE.Vector3(...proj));
+                        const col = new THREE.Color(color);
+                        colors.push(col);
+                    }
+                }
+            } else if (dimension === 2) {
+                // Plane through origin
+                for (let i = 0; i <= density; i++) {
+                    for (let j = 0; j <= density; j++) {
+                        const x = -range + i * step;
+                        const y = -range + j * step;
+                        let point = [x, y, 0, 0];
+                        
+                        point = rotate4D_XW(point, rotation.xw);
+                        point = rotate4D_YW(point, rotation.yw);
+                        point = rotate4D_ZW(point, rotation.zw);
+                        
+                        const proj = stereographicProject(point, 4);
+                        if (proj.every(v => Math.abs(v) < 10)) {
+                            points.push(new THREE.Vector3(...proj));
+                            const dist = Math.sqrt(x*x + y*y) / (range * Math.sqrt(2));
+                            const col = new THREE.Color(color);
+                            col.multiplyScalar(0.7 + dist * 0.3);
+                            colors.push(col);
+                        }
+                    }
+                }
+            } else if (dimension === 3) {
+                // 3D hyperplane (w = 0)
+                for (let i = 0; i <= density; i++) {
+                    for (let j = 0; j <= density; j++) {
+                        for (let k = 0; k <= density; k++) {
+                            const x = -range + i * step;
+                            const y = -range + j * step;
+                            const z = -range + k * step;
+                            let point = [x, y, z, 0];
+                            
+                            point = rotate4D_XW(point, rotation.xw);
+                            point = rotate4D_YW(point, rotation.yw);
+                            point = rotate4D_ZW(point, rotation.zw);
+                            
+                            const proj = stereographicProject(point, 4);
+                            if (proj.every(v => Math.abs(v) < 10)) {
+                                points.push(new THREE.Vector3(...proj));
+                                const dist = Math.sqrt(x*x + y*y + z*z) / (range * Math.sqrt(3));
+                                const col = new THREE.Color(color);
+                                col.multiplyScalar(0.6 + dist * 0.4);
+                                colors.push(col);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Higher dimensions - show full grid
+                for (let i = 0; i <= density/2; i++) {
+                    for (let j = 0; j <= density/2; j++) {
+                        for (let k = 0; k <= density/2; k++) {
+                            const x = -range + i * step * 2;
+                            const y = -range + j * step * 2;
+                            const z = -range + k * step * 2;
+                            let point = [x, y, z, 0];
+                            
+                            point = rotate4D_XW(point, rotation.xw);
+                            point = rotate4D_YW(point, rotation.yw);
+                            point = rotate4D_ZW(point, rotation.zw);
+                            
+                            const proj = stereographicProject(point, 4);
+                            if (proj.every(v => Math.abs(v) < 10)) {
+                                points.push(new THREE.Vector3(...proj));
+                                colors.push(new THREE.Color(color));
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Create point cloud
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const colorArray = new Float32Array(colors.length * 3);
+            colors.forEach((color, i) => {
+                colorArray[i * 3] = color.r;
+                colorArray[i * 3 + 1] = color.g;
+                colorArray[i * 3 + 2] = color.b;
+            });
+            geometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: dimension === 1 ? 0.08 : 0.05,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const pointCloud = new THREE.Points(geometry, material);
+            group.add(pointCloud);
+            
+            // Add mesh for 2D and 3D
+            if (dimension >= 2 && points.length > 3) {
+                const meshGeom = new THREE.BufferGeometry().setFromPoints(points.slice(0, Math.min(points.length, 1000)));
+                const meshMat = new THREE.PointsMaterial({
+                    size: 0.03,
+                    color: color,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const mesh = new THREE.Points(meshGeom, meshMat);
+                group.add(mesh);
+            }
+        }
+        
+        // ============================================
+        // CONTROLS & UI
+        // ============================================
+        
+        let params = {
+            n: 4,      // ambient dimension
+            m: 3,      // number of columns
+            r: 3,      // rank
+            speed: 0.5
+        };
+        
+        let time4D = 0;
+        
+        function updateDerivedInfo() {
+            const colDim = params.r;
+            const nullDim = params.m - params.r;
+            const freeVars = nullDim;
+            
+            document.getElementById('col-dim').textContent = `r(A) = ${colDim}`;
+            document.getElementById('null-dim').textContent = `m - r(A) = ${nullDim}`;
+            document.getElementById('free-vars').textContent = freeVars;
+            
+            // Interpretation
+            let colInterp = '';
+            let nullInterp = '';
+            
+            if (colDim === 0) colInterp = 'Point';
+            else if (colDim === 1) colInterp = 'Line';
+            else if (colDim === 2) colInterp = 'Plane';
+            else if (colDim === 3) colInterp = `3D hyperplane in ℝ${params.n}`;
+            else colInterp = `${colDim}D subspace in ℝ${params.n}`;
+            
+            if (nullDim === 0) nullInterp = 'Point (trivial)';
+            else if (nullDim === 1) nullInterp = 'Line';
+            else if (nullDim === 2) nullInterp = 'Plane';
+            else if (nullDim === 3) nullInterp = '3D space';
+            else nullInterp = `${nullDim}D subspace`;
+            
+            document.getElementById('interpretation').textContent = `${colInterp} | ${nullInterp}`;
+            
+            // Warning
+            const warning = document.getElementById('warning-text');
+            if (params.r > Math.min(params.n, params.m)) {
+                warning.textContent = '⚠ Invalid: rank cannot exceed min(n, m)';
+                warning.style.display = 'block';
+            } else if (params.m > params.n + 3) {
+                warning.textContent = '⚠ Many columns: visualization may be crowded';
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+        
+        function updateVisualization() {
+            const rotation = {
+                xw: time4D * params.speed,
+                yw: time4D * params.speed * 0.7,
+                zw: time4D * params.speed * 0.5
+            };
+            
+            const colDim = params.r;
+            const nullDim = params.m - params.r;
+            
+            createSubspace(colScene, colGroup, colDim, 0x4fc3f7, rotation);
+            createSubspace(nullScene, nullGroup, nullDim, 0xab47bc, rotation);
+        }
+        
+        // Sliders
+        const nSlider = document.getElementById('n-slider');
+        const mSlider = document.getElementById('m-slider');
+        const rSlider = document.getElementById('r-slider');
+        const speedSlider = document.getElementById('speed-slider');
+        
+        nSlider.addEventListener('input', () => {
+            params.n = parseInt(nSlider.value);
+            document.getElementById('n-val').textContent = params.n;
+            rSlider.max = Math.min(params.n, params.m);
+            if (params.r > rSlider.max) {
+                params.r = parseInt(rSlider.max);
+                rSlider.value = params.r;
+                document.getElementById('r-val').textContent = params.r;
+            }
+            updateDerivedInfo();
+            updateVisualization();
+        });
+        
+        mSlider.addEventListener('input', () => {
+            params.m = parseInt(mSlider.value);
+            document.getElementById('m-val').textContent = params.m;
+            rSlider.max = Math.min(params.n, params.m);
+            if (params.r > rSlider.max) {
+                params.r = parseInt(rSlider.max);
+                rSlider.value = params.r;
+                document.getElementById('r-val').textContent = params.r;
+            }
+            updateDerivedInfo();
+            updateVisualization();
+        });
+        
+        rSlider.addEventListener('input', () => {
+            params.r = parseInt(rSlider.value);
+            document.getElementById('r-val').textContent = params.r;
+            updateDerivedInfo();
+            updateVisualization();
+        });
+        
+        speedSlider.addEventListener('input', () => {
+            params.speed = parseFloat(speedSlider.value);
+            document.getElementById('speed-val').textContent = params.speed.toFixed(1);
+        });
+        
+        // Presets
+        document.getElementById('preset-hyperplane').addEventListener('click', () => {
+            params.n = 4; params.m = 3; params.r = 3;
+            nSlider.value = 4; mSlider.value = 3; rSlider.value = 3;
+            rSlider.max = 3;
+            document.getElementById('n-val').textContent = 4;
+            document.getElementById('m-val').textContent = 3;
+            document.getElementById('r-val').textContent = 3;
+            updateDerivedInfo();
+            updateVisualization();
+        });
+        
+        document.getElementById('preset-line').addEventListener('click', () => {
+            params.n = 3; params.m = 2; params.r = 1;
+            nSlider.value = 3; mSlider.value = 2; rSlider.value = 1;
+            rSlider.max = 2;
+            document.getElementById('n-val').textContent = 3;
+            document.getElementById('m-val').textContent = 2;
+            document.getElementById('r-val').textContent = 1;
+            updateDerivedInfo();
+            updateVisualization();
+        });
+        
+        document.getElementById('preset-trivial').addEventListener('click', () => {
+            params.n = 4; params.m = 4; params.r = 4;
+            nSlider.value = 4; mSlider.value = 4; rSlider.value = 4;
+            rSlider.max = 4;
+            document.getElementById('n-val').textContent = 4;
+            document.getElementById('m-val').textContent = 4;
+            document.getElementById('r-val').textContent = 4;
+            updateDerivedInfo();
+            updateVisualization();
+        });
+        
+        // Collapse
+        document.getElementById('collapse-btn').addEventListener('click', () => {
+            const controls = document.getElementById('controls');
+            controls.classList.toggle('collapsed');
+            document.getElementById('collapse-btn').textContent = 
+                controls.classList.contains('collapsed') ? 'Expand' : 'Collapse';
+        });
+        
+        // Initialize
+        rSlider.max = Math.min(params.n, params.m);
+        updateDerivedInfo();
+        updateVisualization();
+        
+        // ============================================
+        // ANIMATION LOOP
+        // ============================================
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            time4D += 0.005;
+            updateVisualization();
+            
+            // Gentle camera rotation
+            const t = Date.now() * 0.0001;
+            colCamera.position.x = Math.cos(t) * 5;
+            colCamera.position.z = Math.sin(t) * 5;
+            colCamera.lookAt(0, 0, 0);
+            
+            nullCamera.position.x = Math.cos(t + Math.PI) * 5;
+            nullCamera.position.z = Math.sin(t + Math.PI) * 5;
+            nullCamera.lookAt(0, 0, 0);
+            
+            colRenderer.render(colScene, colCamera);
+            nullRenderer.render(nullScene, nullCamera);
+        }
+        
+        animate();
+        
+        // ============================================
+        // RESPONSIVE
+        // ============================================
+        
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth / 2;
+            const height = window.innerHeight;
+            
+            colCamera.aspect = width / height;
+            colCamera.updateProjectionMatrix();
+            colRenderer.setSize(width, height);
+            
+            nullCamera.aspect = width / height;
+            nullCamera.updateProjectionMatrix();
+            nullRenderer.setSize(width, height);
+        });
+    </script>
+</body>
+</html>
