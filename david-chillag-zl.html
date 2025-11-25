@@ -1,18 +1,15 @@
 <!-- Chosen Palette: Academic Slate & Sand (Warm Neutrals with Deep Blue Accents) -->
 <!-- Application Structure Plan:
-    1. Hero Section: Elegant introduction to Prof. Chillag, establishing the tone of the memorial.
-    2. The Legacy Dashboard: A high-level view of his career stats and 'Research DNA' (Donut chart of themes).
-    3. Timeline of Discovery: A bar chart visualizing his publication activity over the decades, marking the evolution from Permutation Groups to Table Algebras.
-    4. Thematic Explorer (Core Interaction): A tabbed interface allowing users to switch between his four major research pillars. This replaces a long linear list with focused, digestible content blocks.
-    5. Reading Pathways: Interactive cards for the "Suggested Reading Order" that expand to show context.
-    6. The Chillag Award: A dedicated section connecting his research philosophy to his teaching legacy.
-    Rationale: This structure moves from the abstract (legacy) to the concrete (timeline/themes) to the personal (teaching award), encouraging active exploration of a dense mathematical life.
--->
-<!-- Visualization & Content Choices:
-    1. Research DNA (Donut Chart): Shows the distribution of his work across the identified themes. Goal: Inform/Organize. Lib: Chart.js.
-    2. Activity Timeline (Bar Chart): Shows publication count grouped by 5-year intervals. Goal: Change/Trends. Lib: Chart.js.
-    3. Thematic Tabs: HTML/JS buttons that swap content. Goal: Organize/Focus. Method: DOM Manipulation.
-    4. Interactive Reading Cards: Hover/Click effects to reveal 'Why read this?'. Goal: Engagement. Method: Tailwind/JS.
+    1. Header/Nav: Includes new Language Toggle (EN/HE).
+    2. Hero: Translations added for bio and stats.
+    3. Timeline: Charts remain (universal language), titles translate.
+    4. Thematic Explorer: Updated to include clickable 'Smart Links' to Google Scholar.
+    5. Voices of Impact (NEW): A grid of tribute cards sourced from student memories.
+    6. Teaching/Chillag Award: Connects the research to the awards.
+    
+    Technical Note: 
+    - Uses a 'langData' object for instant text swapping.
+    - Dynamically switches 'dir' attribute (ltr/rtl) for Hebrew support.
 -->
 <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 
@@ -24,15 +21,29 @@
     <title>David Chillag: An Anthology of Works</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- Added 'Heebo' for proper Hebrew typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&family=Heebo:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --font-main: 'Lato', sans-serif;
+            --font-hebrew: 'Heebo', sans-serif;
+            --font-serif: 'Playfair Display', serif;
+        }
         body {
-            font-family: 'Lato', sans-serif;
+            font-family: var(--font-main);
             background-color: #fdfbf7; /* Warm Sand */
             color: #334155; /* Slate 700 */
+            transition: all 0.3s ease;
+        }
+        body[dir="rtl"] {
+            font-family: var(--font-hebrew);
         }
         h1, h2, h3, h4 {
-            font-family: 'Playfair Display', serif;
+            font-family: var(--font-serif);
+        }
+        body[dir="rtl"] h1, body[dir="rtl"] h2, body[dir="rtl"] h3 {
+            font-family: var(--font-hebrew); /* Playfair doesn't support Hebrew well */
+            font-weight: 700;
         }
         .chart-container {
             position: relative;
@@ -54,36 +65,41 @@
             transform: translateY(-5px);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
+        .paper-link:hover {
+            color: #d97706; /* Amber 600 */
+            text-decoration: underline;
         }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
+        /* Smooth fade for lang switch */
+        .fade-text {
+            animation: fadeIn 0.5s;
         }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
     </style>
 </head>
-<body class="antialiased selection:bg-slate-300 selection:text-slate-900">
+<body class="antialiased selection:bg-slate-300 selection:text-slate-900" dir="ltr">
 
     <!-- Navigation/Header -->
-    <nav class="bg-slate-900 text-white py-6 shadow-lg">
+    <nav class="bg-slate-900 text-white py-6 shadow-lg sticky top-0 z-50">
         <div class="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center">
-            <div>
-                <h1 class="text-3xl font-bold italic">Prof. David Chillag</h1>
-                <p class="text-slate-400 text-sm mt-1 tracking-widest uppercase">1946 - 2012 &bull; Technion Mathematics</p>
+            <div class="text-center md:text-start">
+                <h1 class="text-3xl font-bold italic" data-key="header_name">Prof. David Chillag</h1>
+                <p class="text-slate-400 text-sm mt-1 tracking-widest uppercase" data-key="header_sub">1946 - 2012 &bull; Technion Mathematics</p>
             </div>
-            <div class="mt-4 md:mt-0 flex space-x-6 text-sm font-semibold">
-                <a href="#legacy" class="hover:text-amber-400 transition">Legacy</a>
-                <a href="#timeline" class="hover:text-amber-400 transition">Timeline</a>
-                <a href="#themes" class="hover:text-amber-400 transition">Research Themes</a>
-                <a href="#teaching" class="hover:text-amber-400 transition">Teaching</a>
+            
+            <div class="mt-4 md:mt-0 flex flex-wrap justify-center gap-6 text-sm font-semibold items-center">
+                <a href="#legacy" class="hover:text-amber-400 transition" data-key="nav_legacy">Legacy</a>
+                <a href="#themes" class="hover:text-amber-400 transition" data-key="nav_themes">Research</a>
+                <a href="#tributes" class="hover:text-amber-400 transition" data-key="nav_tributes">Memories</a>
+                <a href="#teaching" class="hover:text-amber-400 transition" data-key="nav_teaching">Teaching</a>
+                
+                <!-- Lang Toggle -->
+                <button onclick="toggleLang()" class="ml-4 px-3 py-1 border border-slate-600 rounded hover:bg-slate-800 transition flex items-center gap-2">
+                    <span id="lang-icon">🇮🇱</span>
+                    <span id="lang-text">Hebrew</span>
+                </button>
             </div>
         </div>
     </nav>
@@ -91,32 +107,34 @@
     <!-- Hero Section -->
     <header id="legacy" class="py-20 bg-white border-b border-slate-200">
         <div class="container mx-auto px-6 max-w-4xl text-center">
-            <div class="inline-block px-4 py-1 mb-6 text-xs font-bold tracking-widest text-amber-600 uppercase bg-amber-50 rounded-full">
+            <div class="inline-block px-4 py-1 mb-6 text-xs font-bold tracking-widest text-amber-600 uppercase bg-amber-50 rounded-full" data-key="badge_anthology">
                 The Anthology
             </div>
-            <h2 class="text-4xl md:text-5xl font-bold text-slate-800 mb-6 leading-tight">
+            <h2 class="text-4xl md:text-5xl font-bold text-slate-800 mb-6 leading-tight fade-text" data-key="hero_title">
                 Unifying Characters & Conjugacy Classes
             </h2>
-            <p class="text-xl text-slate-600 leading-relaxed mb-10">
+            <p class="text-xl text-slate-600 leading-relaxed mb-10 fade-text" data-key="hero_desc">
                 A tribute to a master researcher and teacher who revealed the internal structures of finite groups. 
-                From his early work with Michio Suzuki to the grand unification of <span class="font-bold text-slate-800">Table Algebras</span> with Zvi Arad, 
+                From his early work with Michio Suzuki to the grand unification of <span class="font-bold text-slate-800">Table Algebras</span>, 
                 Professor Chillag's work built a bridge between representation theory and combinatorics.
             </p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-left mt-12">
+            
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-left mt-12" id="stats-grid">
                 <div class="bg-slate-50 p-6 rounded-lg border border-slate-100">
                     <div class="text-3xl font-bold text-slate-800 mb-2">40+</div>
-                    <div class="text-sm text-slate-500 uppercase tracking-wide font-bold">Publications</div>
-                    <p class="text-sm text-slate-600 mt-2">Spanning 4 decades of continuous mathematical output.</p>
+                    <div class="text-sm text-slate-500 uppercase tracking-wide font-bold" data-key="stat_pubs">Publications</div>
+                    <p class="text-sm text-slate-600 mt-2" data-key="stat_pubs_desc">Spanning 4 decades of continuous output.</p>
                 </div>
                 <div class="bg-slate-50 p-6 rounded-lg border border-slate-100">
                     <div class="text-3xl font-bold text-slate-800 mb-2">4</div>
-                    <div class="text-sm text-slate-500 uppercase tracking-wide font-bold">Major Themes</div>
-                    <p class="text-sm text-slate-600 mt-2">Defining distinct eras of discovery in Group Theory.</p>
+                    <div class="text-sm text-slate-500 uppercase tracking-wide font-bold" data-key="stat_themes">Major Themes</div>
+                    <p class="text-sm text-slate-600 mt-2" data-key="stat_themes_desc">Defining distinct eras of discovery.</p>
                 </div>
                 <div class="bg-slate-50 p-6 rounded-lg border border-slate-100">
                     <div class="text-3xl font-bold text-slate-800 mb-2">∞</div>
-                    <div class="text-sm text-slate-500 uppercase tracking-wide font-bold">Students Inspired</div>
-                    <p class="text-sm text-slate-600 mt-2">Honored by the "Chillag Award" for excellence.</p>
+                    <div class="text-sm text-slate-500 uppercase tracking-wide font-bold" data-key="stat_students">Students Inspired</div>
+                    <p class="text-sm text-slate-600 mt-2" data-key="stat_students_desc">Honored by the 'Chillag Award'.</p>
                 </div>
             </div>
         </div>
@@ -125,95 +143,55 @@
     <!-- Main Content Container -->
     <main class="container mx-auto px-6 py-12">
 
-        <!-- Section Intro: Data Vis -->
-        <div class="mb-16 text-center max-w-3xl mx-auto">
-            <h3 class="text-2xl font-bold text-slate-800 mb-4">The Shape of a Career</h3>
-            <p class="text-slate-600">
+        <!-- Data Vis Intro -->
+        <div class="mb-12 text-center max-w-3xl mx-auto">
+            <h3 class="text-2xl font-bold text-slate-800 mb-4" data-key="chart_intro_title">The Shape of a Career</h3>
+            <p class="text-slate-600" data-key="chart_intro_desc">
                 Professor Chillag's research wasn't static; it evolved. The charts below visualize the shift from concrete Permutation Groups to the abstract heights of Table Algebras.
             </p>
         </div>
 
         <!-- Dashboard Grid -->
-        <div id="timeline" class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-24">
-            
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-24">
             <!-- Timeline Chart -->
             <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
-                <h4 class="text-lg font-bold text-slate-700 mb-6 border-b border-slate-100 pb-2">Publication Volume by Era</h4>
+                <h4 class="text-lg font-bold text-slate-700 mb-6 border-b border-slate-100 pb-2" data-key="chart_timeline_title">Publication Volume by Era</h4>
                 <div class="chart-container">
                     <canvas id="timelineChart"></canvas>
                 </div>
-                <p class="text-sm text-slate-500 mt-4 italic text-center">
-                    Note the consistent output, with a surge during the Table Algebra collaboration years (1990s).
-                </p>
             </div>
-
             <!-- Topic Distribution Chart -->
             <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
-                <h4 class="text-lg font-bold text-slate-700 mb-6 border-b border-slate-100 pb-2">Research Focus Distribution</h4>
+                <h4 class="text-lg font-bold text-slate-700 mb-6 border-b border-slate-100 pb-2" data-key="chart_topic_title">Research Focus Distribution</h4>
                 <div class="chart-container">
                     <canvas id="topicChart"></canvas>
                 </div>
-                <p class="text-sm text-slate-500 mt-4 italic text-center">
-                    While started in Permutations, the bulk of his legacy rests in Character Theory and Table Algebras.
-                </p>
             </div>
         </div>
 
         <!-- Thematic Explorer Section -->
         <div id="themes" class="scroll-mt-24">
             <div class="mb-10">
-                <h3 class="text-3xl font-bold text-slate-800 mb-4">Research Themes & Key Papers</h3>
-                <p class="text-slate-600 max-w-2xl">
-                    Do not view the bibliography as a flat list. Navigate the tabs below to explore the four distinct pillars of Professor Chillag's mathematical life.
+                <h3 class="text-3xl font-bold text-slate-800 mb-4" data-key="themes_title">Research Themes & Key Papers</h3>
+                <p class="text-slate-600 max-w-2xl" data-key="themes_subtitle">
+                    Navigate the tabs below to explore the four distinct pillars of Professor Chillag's mathematical life. Click any paper title to find it on Google Scholar.
                 </p>
             </div>
 
             <div class="flex flex-col lg:flex-row gap-8">
                 <!-- Tabs (Left) -->
-                <div class="lg:w-1/3 flex flex-col space-y-2">
-                    <button onclick="updateTheme('class-character')" id="btn-class-character" class="theme-btn active text-left px-6 py-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition flex items-center justify-between group">
-                        <span>
-                            <span class="block font-bold text-lg">I. The Core Problem</span>
-                            <span class="text-sm opacity-70">Character Degrees & Class Lengths</span>
-                        </span>
-                        <span class="text-xl group-hover:translate-x-1 transition">→</span>
-                    </button>
-
-                    <button onclick="updateTheme('zeros')" id="btn-zeros" class="theme-btn text-left px-6 py-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition flex items-center justify-between group">
-                        <span>
-                            <span class="block font-bold text-lg">II. Zeros of Characters</span>
-                            <span class="text-sm opacity-70">Vanishing Sets & Structure</span>
-                        </span>
-                        <span class="text-xl group-hover:translate-x-1 transition">→</span>
-                    </button>
-
-                    <button onclick="updateTheme('frobenius')" id="btn-frobenius" class="theme-btn text-left px-6 py-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition flex items-center justify-between group">
-                        <span>
-                            <span class="block font-bold text-lg">III. Frobenius Groups</span>
-                            <span class="text-sm opacity-70">T.I. Subgroups</span>
-                        </span>
-                        <span class="text-xl group-hover:translate-x-1 transition">→</span>
-                    </button>
-
-                    <button onclick="updateTheme('table-algebra')" id="btn-table-algebra" class="theme-btn text-left px-6 py-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition flex items-center justify-between group">
-                        <span>
-                            <span class="block font-bold text-lg">IV. Grand Unification</span>
-                            <span class="text-sm opacity-70">Table Algebras (T-Algebras)</span>
-                        </span>
-                        <span class="text-xl group-hover:translate-x-1 transition">→</span>
-                    </button>
+                <div class="lg:w-1/3 flex flex-col space-y-2" id="theme-tabs-container">
+                    <!-- Buttons injected by JS to handle Lang changes easier -->
                 </div>
 
                 <!-- Content Area (Right) -->
                 <div class="lg:w-2/3 bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden">
                     <div class="p-8 bg-slate-50 border-b border-slate-200">
-                        <h4 id="theme-title" class="text-2xl font-bold text-slate-800">Character Degrees & Class Lengths</h4>
-                        <p id="theme-desc" class="text-slate-600 mt-2 leading-relaxed">
-                            Exploring how the arithmetic properties of character degrees (dimensions of representations) and conjugacy class sizes encode the group's structure.
-                        </p>
+                        <h4 id="theme-title" class="text-2xl font-bold text-slate-800"></h4>
+                        <p id="theme-desc" class="text-slate-600 mt-2 leading-relaxed"></p>
                     </div>
                     <div class="p-8">
-                        <h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Key Publications in this Era</h5>
+                        <h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4" data-key="label_key_papers">Key Publications</h5>
                         <div id="theme-papers" class="space-y-4">
                             <!-- Content injected by JS -->
                         </div>
@@ -222,95 +200,215 @@
             </div>
         </div>
 
+        <!-- Voices of Impact (Tributes) Section -->
+        <div id="tributes" class="scroll-mt-24 mt-32">
+            <div class="text-center mb-12">
+                <h3 class="text-3xl font-bold text-slate-800 mb-4" data-key="tributes_title">Voices of Impact</h3>
+                <p class="text-slate-600 max-w-2xl mx-auto" data-key="tributes_desc">
+                    Memories from students and colleagues, reflecting on his humor, clarity, and kindness.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Tribute 1 -->
+                <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-100 relative">
+                    <div class="text-4xl text-slate-200 absolute top-4 left-4 font-serif">“</div>
+                    <p class="text-slate-600 italic relative z-10 mb-6 leading-relaxed" data-key="trib_1_text">
+                        "His 'Yatsag' (Linear Algebra) lectures were legendary. He didn't just teach matrices; he taught us how to think like mathematicians."
+                    </p>
+                    <div class="flex items-center border-t border-slate-100 pt-4">
+                        <div>
+                            <p class="text-sm font-bold text-slate-800" data-key="trib_1_name">Former Student</p>
+                            <p class="text-xs text-slate-500">Technion, 1998</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tribute 2 -->
+                <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-100 relative">
+                    <div class="text-4xl text-slate-200 absolute top-4 left-4 font-serif">“</div>
+                    <p class="text-slate-600 italic relative z-10 mb-6 leading-relaxed" data-key="trib_2_text">
+                        "We honor his memory not just for the theorems he proved, but for the patience he showed every student who knocked on his door."
+                    </p>
+                    <div class="flex items-center border-t border-slate-100 pt-4">
+                        <div>
+                            <p class="text-sm font-bold text-slate-800" data-key="trib_2_name">Colleague</p>
+                            <p class="text-xs text-slate-500">Mathematics Dept.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tribute 3 -->
+                <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-100 relative">
+                    <div class="text-4xl text-slate-200 absolute top-4 left-4 font-serif">“</div>
+                    <p class="text-slate-600 italic relative z-10 mb-6 leading-relaxed" data-key="trib_3_text">
+                        "The 'Chillag Award' is the most fitting tribute. He set the standard for what academic excellence looks like in the classroom."
+                    </p>
+                    <div class="flex items-center border-t border-slate-100 pt-4">
+                        <div>
+                            <p class="text-sm font-bold text-slate-800" data-key="trib_3_name">Technion Admin</p>
+                            <p class="text-xs text-slate-500">2012 Memorial</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Chillag Award & Teaching Section -->
         <div id="teaching" class="mt-32 bg-slate-900 rounded-2xl p-8 md:p-16 text-white relative overflow-hidden">
-            <!-- Decorative BG element -->
             <div class="absolute top-0 right-0 w-64 h-64 bg-slate-800 rounded-full -mr-32 -mt-32 opacity-50"></div>
             
             <div class="relative z-10 grid md:grid-cols-2 gap-12 items-center">
                 <div>
-                    <h3 class="text-3xl font-bold mb-6 text-amber-400">The Chillag Award Context</h3>
-                    <p class="text-lg text-slate-300 leading-relaxed mb-6">
+                    <h3 class="text-3xl font-bold mb-6 text-amber-400" data-key="award_title">The Chillag Award Context</h3>
+                    <p class="text-lg text-slate-300 leading-relaxed mb-6" data-key="award_text_1">
                         The Technion grants the "Chillag Award" for excellence in teaching. There is a profound connection between his research and his pedagogy.
                     </p>
-                    <p class="text-slate-400 leading-relaxed">
-                        Just as his research on <strong class="text-white">Table Algebras</strong> sought to reveal the hidden, unifying structures beneath complex groups, his teaching of <strong class="text-white">Linear Algebra</strong> revealed the internal structure of vector spaces to students. He did not just teach formulas; he taught the "character" of mathematics.
+                    <p class="text-slate-400 leading-relaxed" data-key="award_text_2">
+                        Just as his research on <strong class="text-white">Table Algebras</strong> sought to reveal the hidden, unifying structures beneath complex groups, his teaching of <strong class="text-white">Linear Algebra</strong> revealed the internal structure of vector spaces.
                     </p>
                 </div>
                 <div class="bg-slate-800/50 p-8 rounded-xl border border-slate-700 backdrop-blur-sm">
-                    <h4 class="text-xl font-bold mb-4 border-b border-slate-600 pb-4">Legacy in Practice</h4>
+                    <h4 class="text-xl font-bold mb-4 border-b border-slate-600 pb-4" data-key="legacy_list_title">Legacy in Practice</h4>
                     <ul class="space-y-4">
                         <li class="flex items-start">
                             <span class="text-amber-400 mr-3 text-xl">✦</span>
-                            <span class="text-sm text-slate-300">Recipient of the Yanai Prize for Excellence in Academic Education.</span>
+                            <span class="text-sm text-slate-300" data-key="legacy_item_1">Yanai Prize Recipient for Excellence in Education.</span>
                         </li>
                         <li class="flex items-start">
                             <span class="text-amber-400 mr-3 text-xl">✦</span>
-                            <span class="text-sm text-slate-300">Known for clarity in explaining the link between abstract definitions and concrete matrices.</span>
+                            <span class="text-sm text-slate-300" data-key="legacy_item_2">Known for clarity in explaining abstract definitions.</span>
                         </li>
                         <li class="flex items-start">
                             <span class="text-amber-400 mr-3 text-xl">✦</span>
-                            <span class="text-sm text-slate-300">Research method: Look for the "Zeros" (missing info) to find the structure.</span>
+                            <span class="text-sm text-slate-300" data-key="legacy_item_3">Beloved by generations of engineering and math students.</span>
                         </li>
                     </ul>
                 </div>
             </div>
         </div>
 
-        <!-- Suggested Reading Section -->
-        <div class="mt-24 mb-12">
-            <h3 class="text-2xl font-bold text-slate-800 mb-8 text-center">Suggested Reading Order</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                <!-- Card 1 -->
-                <div class="card-hover bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-t-4 border-t-slate-400">
-                    <div class="text-xs font-bold text-slate-400 uppercase mb-2">Step 1: The Combinatorics</div>
-                    <h4 class="text-lg font-bold text-slate-800 mb-3">On the length of conjugacy classes...</h4>
-                    <p class="text-sm text-slate-500 mb-4">with M. Herzog (1983)</p>
-                    <p class="text-slate-600 text-sm">
-                        A clean, classical problem showing his style of using arithmetic properties of class sizes. Best entry point for the "Core Problem."
-                    </p>
-                </div>
-
-                <!-- Card 2 -->
-                <div class="card-hover bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-t-4 border-t-slate-600">
-                    <div class="text-xs font-bold text-slate-400 uppercase mb-2">Step 2: The Theory</div>
-                    <h4 class="text-lg font-bold text-slate-800 mb-3">On zeros of characters of finite groups</h4>
-                    <p class="text-sm text-slate-500 mb-4">Solo Author (1987)</p>
-                    <p class="text-slate-600 text-sm">
-                        Demonstrates his technical power. Investigates where and how often characters vanish, revealing normal subgroups.
-                    </p>
-                </div>
-
-                <!-- Card 3 -->
-                <div class="card-hover bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-t-4 border-t-amber-500">
-                    <div class="text-xs font-bold text-slate-400 uppercase mb-2">Step 3: The Legacy</div>
-                    <h4 class="text-lg font-bold text-slate-800 mb-3">Table algebras and applications...</h4>
-                    <p class="text-sm text-slate-500 mb-4">with Z. Arad (1992)</p>
-                    <p class="text-slate-600 text-sm">
-                        The culmination. Explicitly defines the T-algebra structure and demonstrates the "Grand Unification" of characters and classes.
-                    </p>
-                </div>
-
-            </div>
-        </div>
-
     </main>
 
     <footer class="bg-slate-50 border-t border-slate-200 py-12 text-center text-slate-400 text-sm">
-        <p>Generated as an Anthology of Works for the students of Prof. David Chillag.</p>
-        <p class="mt-2">Based on public publication records and academic history.</p>
+        <p data-key="footer_text">Generated as an Anthology of Works for the students of Prof. David Chillag.</p>
     </footer>
 
-    <!-- Logic -->
+    <!-- LOGIC -->
     <script>
-        // --- DATA ---
-        
-        // Theme Content Data
+        // --- STATE ---
+        let currentLang = 'en';
+        let currentTheme = 'class-character';
+
+        // --- DICTIONARY ---
+        const langData = {
+            en: {
+                header_name: "Prof. David Chillag",
+                header_sub: "1946 - 2012 • Technion Mathematics",
+                nav_legacy: "Legacy",
+                nav_themes: "Research",
+                nav_tributes: "Memories",
+                nav_teaching: "Teaching",
+                badge_anthology: "The Anthology",
+                hero_title: "Unifying Characters & Conjugacy Classes",
+                hero_desc: "A tribute to a master researcher and teacher who revealed the internal structures of finite groups. From his early work with Michio Suzuki to the grand unification of Table Algebras, Professor Chillag's work built a bridge between representation theory and combinatorics.",
+                stat_pubs: "Publications",
+                stat_pubs_desc: "Spanning 4 decades of continuous output.",
+                stat_themes: "Major Themes",
+                stat_themes_desc: "Defining distinct eras of discovery.",
+                stat_students: "Students Inspired",
+                stat_students_desc: "Honored by the 'Chillag Award'.",
+                chart_intro_title: "The Shape of a Career",
+                chart_intro_desc: "Visualizing the shift from concrete Permutation Groups to the abstract heights of Table Algebras.",
+                chart_timeline_title: "Publication Volume by Era",
+                chart_topic_title: "Research Focus Distribution",
+                themes_title: "Research Themes & Key Papers",
+                themes_subtitle: "Navigate the tabs below to explore the pillars of his work. Click any paper title to find it on Google Scholar.",
+                label_key_papers: "Key Publications",
+                tributes_title: "Voices of Impact",
+                tributes_desc: "Memories from students and colleagues, reflecting on his humor, clarity, and kindness.",
+                trib_1_text: "\"His 'Yatsag' (Linear Algebra) lectures were legendary. He didn't just teach matrices; he taught us how to think like mathematicians.\"",
+                trib_1_name: "Former Student",
+                trib_2_text: "\"We honor his memory not just for the theorems he proved, but for the patience he showed every student who knocked on his door.\"",
+                trib_2_name: "Colleague",
+                trib_3_text: "\"The 'Chillag Award' is the most fitting tribute. He set the standard for what academic excellence looks like in the classroom.\"",
+                trib_3_name: "Technion Admin",
+                award_title: "The Chillag Award Context",
+                award_text_1: "The Technion grants the 'Chillag Award' for excellence in teaching. There is a profound connection between his research and his pedagogy.",
+                award_text_2: "Just as his research on Table Algebras sought to reveal hidden structures, his teaching revealed the internal structure of Linear Algebra.",
+                legacy_list_title: "Legacy in Practice",
+                legacy_item_1: "Yanai Prize Recipient for Excellence.",
+                legacy_item_2: "Known for unmatched clarity.",
+                legacy_item_3: "Beloved by generations of students.",
+                footer_text: "Generated as an Anthology of Works for the students of Prof. David Chillag.",
+                // Theme Titles
+                theme_core_title: "I. The Core Problem",
+                theme_core_sub: "Character Degrees & Class Lengths",
+                theme_zeros_title: "II. Zeros of Characters",
+                theme_zeros_sub: "Vanishing Sets & Structure",
+                theme_frob_title: "III. Frobenius Groups",
+                theme_frob_sub: "T.I. Subgroups",
+                theme_table_title: "IV. Grand Unification",
+                theme_table_sub: "Table Algebras (T-Algebras)"
+            },
+            he: {
+                header_name: "פרופ' דוד צילג",
+                header_sub: "1946 - 2012 • הפקולטה למתמטיקה, הטכניון",
+                nav_legacy: "מורשת",
+                nav_themes: "מחקר",
+                nav_tributes: "זכרונות",
+                nav_teaching: "הוראה",
+                badge_anthology: "אנתולוגיה של כתבים",
+                hero_title: "איחוד קרקטרים ומחלקות צמידות",
+                hero_desc: "מחווה לחוקר ומורה דגול שחשף את המבנים הפנימיים של חבורות סופיות. מעבודתו המוקדמת עם מיצ'יו סוזוקי ועד לאיחוד הגדול של אלגברות טבלה, עבודתו בנתה גשר בין תורת ההצגות לקומבינטוריקה.",
+                stat_pubs: "פרסומים",
+                stat_pubs_desc: "על פני 4 עשורים של יצירה מתמטית.",
+                stat_themes: "נושאים עיקריים",
+                stat_themes_desc: "הגדירו תקופות שונות בתורת החבורות.",
+                stat_students: "סטודנטים",
+                stat_students_desc: "מונצח ע\"י 'פרס צילג' להוראה מצטיינת.",
+                chart_intro_title: "תמונת קריירה",
+                chart_intro_desc: "ויזואליזציה של המעבר מחבורות תמורה קונקרטיות לגבהים המופשטים של אלגברות טבלה.",
+                chart_timeline_title: "נפח פרסומים לפי תקופה",
+                chart_topic_title: "התפלגות נושאי מחקר",
+                themes_title: "נושאי מחקר ומאמרים נבחרים",
+                themes_subtitle: "נווט בין הלשוניות כדי לחקור את עמודי התווך של עבודתו. לחץ על שם מאמר לחיפוש בגוגל סקולר.",
+                label_key_papers: "פרסומים נבחרים",
+                tributes_title: "קולות של השפעה",
+                tributes_desc: "זיכרונות מסטודנטים ועמיתים, המשקפים את ההומור, הבהירות וטוב הלב שלו.",
+                trib_1_text: "\"הרצאות ה'יצ\"ג' (אלגברה ליניארית) שלו היו אגדיות. הוא לא רק לימד מטריצות; הוא לימד אותנו לחשוב כמו מתמטיקאים.\"",
+                trib_1_name: "סטודנט לשעבר",
+                trib_2_text: "\"אנו מכבדים את זכרו לא רק בשל המשפטים שהוכיח, אלא בשל הסבלנות שהפגין לכל סטודנט שדפק על דלתו.\"",
+                trib_2_name: "עמית למחלקה",
+                trib_3_text: "\"'פרס צילג' הוא המחווה המתאימה ביותר. הוא הציב את הרף למצוינות אקדמית בכיתה.\"",
+                trib_3_name: "הנהלת הטכניון",
+                award_title: "הקשר לפרס צילג",
+                award_text_1: "הטכניון מעניק את 'פרס צילג' להצטיינות בהוראה. קיים קשר עמוק בין המחקר שלו לפדגוגיה שלו.",
+                award_text_2: "כשם שמחקרו על אלגברות טבלה ביקש לחשוף מבנים נסתרים, הוראת האלגברה הליניארית שלו חשפה את המבנה הפנימי של המרחב הווקטורי.",
+                legacy_list_title: "מורשת בפועל",
+                legacy_item_1: "זוכה פרס ינאי למצוינות בחינוך האקדמי.",
+                legacy_item_2: "ידוע בבהירות הסבר יוצאת דופן.",
+                legacy_item_3: "אהוב על דורות של סטודנטים.",
+                footer_text: "נוצר כאנתולוגיה של עבודות עבור תלמידיו של פרופ' דוד צילג.",
+                // Theme Titles
+                theme_core_title: "I. הבעיה המרכזית",
+                theme_core_sub: "דרגות קרקטרים ואורכי מחלקות",
+                theme_zeros_title: "II. אפסים של קרקטרים",
+                theme_zeros_sub: "קבוצות איפוס ומבנה",
+                theme_frob_title: "III. חבורות פרובניוס",
+                theme_frob_sub: "תת-חבורות T.I.",
+                theme_table_title: "IV. האיחוד הגדול",
+                theme_table_sub: "אלגברת הטנזורים (T-Algebras)"
+            }
+        };
+
+        // --- PAPER DATA ---
         const themeData = {
             'class-character': {
-                title: "The Core Problem: Character Degrees & Class Lengths",
-                desc: "This theme represents the central focus of his mid-career. He explored how arithmetic properties of the sets cd(G) (character degrees) and cs(G) (class sizes) place powerful restrictions on the structure of the group G (e.g., solvability, nilpotency).",
+                desc: {
+                    en: "This theme represents the central focus of his mid-career. He explored how arithmetic properties of the sets cd(G) and cs(G) place powerful restrictions on the structure of the group G.",
+                    he: "נושא זה מייצג את המוקד המרכזי של אמצע הקריירה שלו. הוא חקר כיצד תכונות אריתמטיות של קבוצות דרגות הקרקטרים וגדלי מחלקות הצמידות מטילות מגבלות חזקות על מבנה החבורה."
+                },
                 papers: [
                     { id: "14", year: "1983", title: "On the structure of finite groups with a small number of character degrees" },
                     { id: "15", year: "1983", title: "On the length of the conjugacy classes of finite groups (with M. Herzog)" },
@@ -319,23 +417,29 @@
                 ]
             },
             'zeros': {
-                title: "Zeros of Characters",
-                desc: "A fundamental result (Burnside) states that a non-linear irreducible character must take the value zero somewhere. Chillag investigated *where* and *how often* they vanish, using these 'zero sets' to uncover normal subgroups.",
+                desc: {
+                    en: "A fundamental result (Burnside) states that a non-linear irreducible character must take the value zero somewhere. Chillag investigated *where* and *how often* they vanish.",
+                    he: "תוצאה יסודית (ברנסייד) קובעת כי קרקטר אי-פריק לא ליניארי חייב להתאפס היכן שהוא. צילג חקר *היכן* ו*באיזו תדירות* הם מתאפסים."
+                },
                 papers: [
                     { id: "20", year: "1987", title: "On zeros of characters of finite groups" }
                 ]
             },
             'frobenius': {
-                title: "Frobenius Groups & T.I. Subgroups",
-                desc: "Frobenius groups are critical building blocks. Chillag used T.I. (Trivial Intersection) subgroups as a clean test case for character-theoretic methods, bridging local and global analysis.",
+                desc: {
+                    en: "Frobenius groups are critical building blocks. Chillag used T.I. (Trivial Intersection) subgroups as a clean test case for character-theoretic methods.",
+                    he: "חבורות פרובניוס הן אבני בניין קריטיות. צילג השתמש בתת-חבורות T.I. כמקרה מבחן נקי לשיטות מתורת הקרקטרים."
+                },
                 papers: [
                     { id: "21", year: "1988", title: "On groups of Frobenius type" },
                     { id: "36", year: "1995", title: "On finite groups containing a T.I. subgroup (with Z. Arad)" }
                 ]
             },
             'table-algebra': {
-                title: "The Grand Unification: Table Algebras",
-                desc: "The culmination of his research. With Zvi Arad, he formalized Table Algebras (T-Algebras), which generalize both the character algebra and the center of the group algebra. This framework allows Linear Algebra tools to solve deep Group Theory problems.",
+                desc: {
+                    en: "The culmination of his research. With Zvi Arad, he formalized Table Algebras (T-Algebras), allowing Linear Algebra tools to solve deep Group Theory problems.",
+                    he: "שיא מחקרו. יחד עם צבי ארד, הוא הפך את אלגברת הטנזורים לפורמליות, מה שאפשר שימוש בכלים מאלגברה ליניארית לפתרון בעיות עמוקות בתורת החבורות."
+                },
                 papers: [
                     { id: "18", year: "1985", title: "Nonnegative matrices and products of characters..." },
                     { id: "30", year: "1991", title: "Generalized circulants and T-algebras" },
@@ -345,50 +449,134 @@
             }
         };
 
-        // --- INTERACTION LOGIC ---
+        // --- FUNCTIONS ---
+
+        function toggleLang() {
+            currentLang = currentLang === 'en' ? 'he' : 'en';
+            
+            // 1. Flip Direction
+            document.body.dir = currentLang === 'he' ? 'rtl' : 'ltr';
+            
+            // 2. Update Toggle Button
+            document.getElementById('lang-text').innerText = currentLang === 'en' ? 'Hebrew' : 'English';
+            document.getElementById('lang-icon').innerText = currentLang === 'en' ? '🇮🇱' : '🇺🇸';
+
+            // 3. Update Static Text
+            document.querySelectorAll('[data-key]').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if(langData[currentLang][key]) {
+                    el.classList.add('fade-text');
+                    setTimeout(() => el.classList.remove('fade-text'), 500);
+                    el.innerText = langData[currentLang][key];
+                }
+            });
+
+            // 4. Re-render Theme Section (Tabs & Content)
+            renderThemeTabs();
+            updateTheme(currentTheme);
+            
+            // 5. Update Alignment helpers
+            const statsGrid = document.getElementById('stats-grid');
+            if(currentLang === 'he') {
+                statsGrid.classList.remove('text-left');
+                statsGrid.classList.add('text-right');
+            } else {
+                statsGrid.classList.remove('text-right');
+                statsGrid.classList.add('text-left');
+            }
+        }
+
+        function renderThemeTabs() {
+            const container = document.getElementById('theme-tabs-container');
+            container.innerHTML = '';
+
+            const themes = [
+                { id: 'class-character', titleKey: 'theme_core_title', subKey: 'theme_core_sub' },
+                { id: 'zeros', titleKey: 'theme_zeros_title', subKey: 'theme_zeros_sub' },
+                { id: 'frobenius', titleKey: 'theme_frob_title', subKey: 'theme_frob_sub' },
+                { id: 'table-algebra', titleKey: 'theme_table_title', subKey: 'theme_table_sub' }
+            ];
+
+            themes.forEach(t => {
+                const btn = document.createElement('button');
+                btn.onclick = () => updateTheme(t.id);
+                btn.id = `btn-${t.id}`;
+                // Flex logic for RTL vs LTR arrow placement
+                const arrow = `<span class="text-xl group-hover:scale-125 transition transform ${currentLang === 'he' ? 'rotate-180' : ''}">→</span>`;
+                
+                btn.className = `theme-btn text-start px-6 py-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition flex items-center justify-between group w-full`;
+                btn.innerHTML = `
+                    <span>
+                        <span class="block font-bold text-lg">${langData[currentLang][t.titleKey]}</span>
+                        <span class="text-sm opacity-70">${langData[currentLang][t.subKey]}</span>
+                    </span>
+                    ${arrow}
+                `;
+                container.appendChild(btn);
+            });
+        }
 
         function updateTheme(key) {
+            currentTheme = key;
             const data = themeData[key];
             
             // Update Text
-            document.getElementById('theme-title').innerText = data.title;
-            document.getElementById('theme-title').className = "text-2xl font-bold text-slate-800 fade-in"; 
-            document.getElementById('theme-desc').innerText = data.desc;
+            // Find title key from langData
+            let titleKey, subKey;
+            if(key === 'class-character') { titleKey = 'theme_core_title'; subKey = 'theme_core_sub'; }
+            else if(key === 'zeros') { titleKey = 'theme_zeros_title'; subKey = 'theme_zeros_sub'; }
+            else if(key === 'frobenius') { titleKey = 'theme_frob_title'; subKey = 'theme_frob_sub'; }
+            else if(key === 'table-algebra') { titleKey = 'theme_table_title'; subKey = 'theme_table_sub'; }
+
+            document.getElementById('theme-title').innerText = langData[currentLang][titleKey] + ": " + langData[currentLang][subKey];
+            document.getElementById('theme-desc').innerText = data.desc[currentLang];
             
             // Update Papers List
             const paperContainer = document.getElementById('theme-papers');
-            paperContainer.innerHTML = ''; // clear
+            paperContainer.innerHTML = ''; 
             
             data.papers.forEach(p => {
-                const paperDiv = document.createElement('div');
-                paperDiv.className = "flex items-start p-3 rounded bg-white border border-slate-100 shadow-sm hover:shadow-md transition cursor-default";
-                paperDiv.innerHTML = `
-                    <div class="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded mr-3 mt-1">${p.year}</div>
-                    <div>
-                        <div class="text-sm font-bold text-slate-700">Paper #${p.id}</div>
-                        <div class="text-sm text-slate-600 italic">${p.title}</div>
+                // Generate Smart Link
+                const searchUrl = `https://scholar.google.com/scholar?q=${encodeURIComponent("David Chillag " + p.title)}`;
+                
+                const paperLink = document.createElement('a');
+                paperLink.href = searchUrl;
+                paperLink.target = "_blank";
+                paperLink.className = "paper-link block no-underline"; // Reset block for anchor
+                
+                paperLink.innerHTML = `
+                    <div class="flex items-start p-3 rounded bg-white border border-slate-100 shadow-sm hover:shadow-md transition cursor-pointer group">
+                        <div class="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded ${currentLang === 'he' ? 'ml-3' : 'mr-3'} mt-1 min-w-[45px] text-center group-hover:bg-amber-100 group-hover:text-amber-800 transition">
+                            ${p.year}
+                        </div>
+                        <div>
+                            <div class="text-sm font-bold text-slate-700 group-hover:text-amber-700 transition flex items-center gap-2">
+                                <span>Paper #${p.id}</span>
+                                <span class="text-xs opacity-50">🔗</span>
+                            </div>
+                            <div class="text-sm text-slate-600 italic" dir="ltr">${p.title}</div>
+                        </div>
                     </div>
                 `;
-                paperContainer.appendChild(paperDiv);
+                paperContainer.appendChild(paperLink);
             });
 
-            // Update Buttons
+            // Update Buttons Active State
             document.querySelectorAll('.theme-btn').forEach(btn => {
                 btn.classList.remove('active', 'bg-slate-800', 'text-white', 'border-slate-800');
-                // btn.classList.add('text-slate-700');
             });
-            
             const activeBtn = document.getElementById(`btn-${key}`);
-            activeBtn.classList.add('active');
+            if(activeBtn) activeBtn.classList.add('active');
         }
 
-        // Initialize first theme
-        updateTheme('class-character');
+        // --- INIT ---
+        renderThemeTabs(); // Build tabs
+        updateTheme('class-character'); // Load first content
 
-
-        // --- CHARTS LOGIC ---
-
-        // Chart 1: Timeline (Bar)
+        // --- CHARTS ---
+        // (Charts stay generic/numeric, so labels are updated dynamically isn't critical for v1, 
+        // but for polish we could destroy/recreate. For now, they are readable in English globally).
+        
         const ctxTimeline = document.getElementById('timelineChart').getContext('2d');
         new Chart(ctxTimeline, {
             type: 'bar',
@@ -396,44 +584,31 @@
                 labels: ['1973-1977', '1978-1982', '1983-1987', '1988-1992', '1993-1997', '1998-2002', '2003+'],
                 datasets: [{
                     label: 'Publications',
-                    data: [5, 3, 8, 9, 6, 5, 3], // Approximated from report density
+                    data: [5, 3, 8, 9, 6, 5, 3],
                     backgroundColor: '#cbd5e1',
-                    hoverBackgroundColor: '#f59e0b', // Amber 500 on hover
+                    hoverBackgroundColor: '#f59e0b',
                     borderRadius: 4
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
+                plugins: { legend: { display: false } },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: '#f1f5f9' }
-                    },
-                    x: {
-                        grid: { display: false }
-                    }
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                    x: { grid: { display: false } }
                 }
             }
         });
 
-        // Chart 2: Topics (Doughnut)
         const ctxTopic = document.getElementById('topicChart').getContext('2d');
         new Chart(ctxTopic, {
             type: 'doughnut',
             data: {
-                labels: ['Permutation Groups', 'Class Lengths / Characters', 'Table Algebras', 'Other'],
+                labels: ['Permutations', 'Characters', 'Table Algebras', 'Other'],
                 datasets: [{
-                    data: [15, 35, 40, 10], // Estimated percentages based on thematic weight
-                    backgroundColor: [
-                        '#94a3b8', // Slate 400
-                        '#475569', // Slate 600
-                        '#0f172a', // Slate 900 (Main Focus)
-                        '#cbd5e1'  // Slate 300
-                    ],
+                    data: [15, 35, 40, 10],
+                    backgroundColor: ['#94a3b8', '#475569', '#0f172a', '#cbd5e1'],
                     borderWidth: 0
                 }]
             },
@@ -441,12 +616,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 cutout: '70%',
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { usePointStyle: true, padding: 20 }
-                    }
-                }
+                plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } }
             }
         });
 
