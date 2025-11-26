@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linear Transformations — 3D</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  
+  <script type="text/babel">
+    const { useState, useRef, useEffect } = React;
+
+    const presets = {
+      identity: {
+        name: 'Identity (I)',
+        matrix: [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+      },
+      scale: {
+        name: 'Scale (k=2)',
+        matrix: [[2, 0, 0], [0, 2, 0], [0, 0, 2]]
+      },
+      shearXY: {
+        name: 'Shear XY',
+        matrix: [[1, 1, 0], [0, 1, 0], [0, 0, 1]]
+      },
+      shearYX: {
+        name: 'Shear YX',
+        matrix: [[1, 0, 0], [1, 1, 0], [0, 0, 1]]
+      },
+      shearXZ: {
+        name: 'Shear XZ',
+        matrix: [[1, 0, 1], [0, 1, 0], [0, 0, 1]]
+      },
+      shearZX: {
+        name: 'Shear ZX',
+        matrix: [[1, 0, 0], [0, 1, 0], [1, 0, 1]]
+      }
+    };
+
+    function TransformationVisualizer() {
+      const containerRef = useRef(null);
+      const sceneRef = useRef(null);
+      const rendererRef = useRef(null);
+      const cameraRef = useRef(null);
+      const objectsRef = useRef([]);
+      const animationRef = useRef(null);
+      
+      const [vectors, setVectors] = useState([
+        { x: 1, y: 0, z: 0 },
+        { x: 0, y: 1, z: 0 },
+        { x: 0, y: 0, z: 1 }
+      ]);
+      
+      const [matrix, setMatrix] = useState([
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1]
+      ]);
+      
+      const applyTransform = (v, m) => ({
+        x: m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z,
+        y: m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z,
+        z: m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z
+      });
+      
+      const determinant3x3 = (m) => {
+        return m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+             - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+             + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+      };
+      
+      const vectorsToMatrix = (v1, v2, v3) => [
+        [v1.x, v2.x, v3.x],
+        [v1.y, v2.y, v3.y],
+        [v1.z, v2.z, v3.z]
+      ];
+      
+      const transformedVectors = vectors.map(v => applyTransform(v, matrix));
+      
+      const originalVolume = Math.abs(determinant3x3(vectorsToMatrix(vectors[0], vectors[1], vectors[2])));
+      const transformedVolume = Math.abs(determinant3x3(vectorsToMatrix(transformedVectors[0], transformedVectors[1], transformedVectors[2])));
+      const matrixDet = determinant3x3(matrix);
+      
+      useEffect(() => {
+        if (!containerRef.current) return;
+        
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+        sceneRef.current = scene;
+        
+        const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+        camera.position.set(6, 5, 8);
+        camera.lookAt(0, 0, 0);
+        cameraRef.current = camera;
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(450, 450);
+        containerRef.current.appendChild(renderer.domElement);
+        rendererRef.current = renderer;
+        
+        // Grid
+        const gridXY = new THREE.GridHelper(10, 10, 0x333333, 0x222222);
+        gridXY.rotation.x = Math.PI / 2;
+        scene.add(gridXY);
+        
+        // Axes
+        const axesLength = 5;
+        const createAxis = (start, end, color) => {
+          const geom = new THREE.BufferGeometry().setFromPoints([start, end]);
+          return new THREE.Line(geom, new THREE.LineBasicMaterial({ color }));
+        };
+        
+        scene.add(createAxis(new THREE.Vector3(-axesLength, 0, 0), new THREE.Vector3(axesLength, 0, 0), 0x444444));
+        scene.add(createAxis(new THREE.Vector3(0, -axesLength, 0), new THREE.Vector3(0, axesLength, 0), 0x444444));
+        scene.add(createAxis(new THREE.Vector3(0, 0, -axesLength), new THREE.Vector3(0, 0, axesLength), 0x444444));
+        
+        // Axis labels
+        const createLabel = (text, position) => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 64;
+          canvas.height = 64;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#666666';
+          ctx.font = '48px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(text, 32, 32);
+          const texture = new THREE.CanvasTexture(canvas);
+          const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+          const sprite = new THREE.Sprite(spriteMaterial);
+          sprite.position.copy(position);
+          sprite.scale.set(0.5, 0.5, 1);
+          return sprite;
+        };
+        
+        scene.add(createLabel('X', new THREE.Vector3(5.5, 0, 0)));
+        scene.add(createLabel('Y', new THREE.Vector3(0, 5.5, 0)));
+        scene.add(createLabel('Z', new THREE.Vector3(0, 0, 5.5)));
+        
+        let angle = 0;
+        const animate = () => {
+          animationRef.current = requestAnimationFrame(animate);
+          angle += 0.003;
+          camera.position.x = 10 * Math.cos(angle);
+          camera.position.z = 10 * Math.sin(angle);
+          camera.lookAt(0, 0, 0);
+          renderer.render(scene, camera);
+        };
+        animate();
+        
+        return () => {
+          cancelAnimationFrame(animationRef.current);
+          renderer.dispose();
+          if (containerRef.current && renderer.domElement) {
+            containerRef.current.removeChild(renderer.domElement);
+          }
+        };
+      }, []);
+      
+      // Update geometry when vectors/matrix change
+      useEffect(() => {
+        if (!sceneRef.current) return;
+        
+        const scene = sceneRef.current;
+        
+        // Clear previous objects
+        objectsRef.current.forEach(obj => scene.remove(obj));
+        objectsRef.current = [];
+        
+        const vectorColors = [0x666666, 0x666666, 0x666666];
+        const transformedColors = [0xffffff, 0xcccccc, 0x999999];
+        
+        // Create arrows
+        const createArrow = (v, color) => {
+          const dir = new THREE.Vector3(v.x, v.y, v.z);
+          const length = dir.length();
+          if (length < 0.001) return null;
+          dir.normalize();
+          const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(0, 0, 0), length, color, 0.2, 0.1);
+          return arrow;
+        };
+        
+        // Original vectors (gray)
+        vectors.forEach((v, i) => {
+          const arrow = createArrow(v, vectorColors[i]);
+          if (arrow) {
+            scene.add(arrow);
+            objectsRef.current.push(arrow);
+          }
+        });
+        
+        // Transformed vectors (white/light)
+        transformedVectors.forEach((v, i) => {
+          const arrow = createArrow(v, transformedColors[i]);
+          if (arrow) {
+            scene.add(arrow);
+            objectsRef.current.push(arrow);
+          }
+        });
+        
+        // Create parallelepiped edges
+        const createParallelepiped = (v1, v2, v3, color, opacity) => {
+          const o = new THREE.Vector3(0, 0, 0);
+          const a = new THREE.Vector3(v1.x, v1.y, v1.z);
+          const b = new THREE.Vector3(v2.x, v2.y, v2.z);
+          const c = new THREE.Vector3(v3.x, v3.y, v3.z);
+          const ab = a.clone().add(b);
+          const ac = a.clone().add(c);
+          const bc = b.clone().add(c);
+          const abc = a.clone().add(b).add(c);
+          
+          const edges = [
+            [o, a], [o, b], [o, c],
+            [a, ab], [a, ac],
+            [b, ab], [b, bc],
+            [c, ac], [c, bc],
+            [ab, abc], [ac, abc], [bc, abc]
+          ];
+          
+          const material = new THREE.LineBasicMaterial({ 
+            color, 
+            transparent: true, 
+            opacity,
+            linewidth: 1
+          });
+          
+          const lines = [];
+          edges.forEach(([start, end]) => {
+            const geom = new THREE.BufferGeometry().setFromPoints([start, end]);
+            const line = new THREE.Line(geom, material);
+            lines.push(line);
+          });
+          
+          return lines;
+        };
+        
+        // Original parallelepiped (dim)
+        const origLines = createParallelepiped(vectors[0], vectors[1], vectors[2], 0x555555, 0.4);
+        origLines.forEach(line => {
+          scene.add(line);
+          objectsRef.current.push(line);
+        });
+        
+        // Transformed parallelepiped (bright)
+        const transLines = createParallelepiped(transformedVectors[0], transformedVectors[1], transformedVectors[2], 0xffffff, 0.7);
+        transLines.forEach(line => {
+          scene.add(line);
+          objectsRef.current.push(line);
+        });
+        
+      }, [vectors, matrix, transformedVectors]);
+      
+      const handleVectorChange = (index, axis, value) => {
+        setVectors(prev => {
+          const newVectors = [...prev];
+          newVectors[index] = { ...newVectors[index], [axis]: value };
+          return newVectors;
+        });
+      };
+      
+      const handleMatrixChange = (row, col, value) => {
+        setMatrix(prev => {
+          const newMatrix = prev.map(r => [...r]);
+          newMatrix[row][col] = value;
+          return newMatrix;
+        });
+      };
+      
+      const applyPreset = (presetKey) => {
+        setMatrix(presets[presetKey].matrix.map(r => [...r]));
+      };
+      
+      const Slider = ({ label, value, onChange, min = -4, max = 4 }) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+          <span style={{ width: '20px', fontFamily: 'monospace', color: '#888' }}>{label}</span>
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={1}
+            value={value}
+            onChange={(e) => onChange(parseInt(e.target.value))}
+            style={{ flex: 1, accentColor: '#666' }}
+          />
+          <input
+            type="number"
+            value={value}
+            onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+            step={1}
+            style={{
+              width: '50px',
+              background: '#222',
+              border: '1px solid #444',
+              color: '#fff',
+              padding: '4px',
+              fontFamily: 'monospace',
+              textAlign: 'right'
+            }}
+          />
+        </div>
+      );
+      
+      const vectorLabels = ['v₁', 'v₂', 'v₃'];
+      
+      return (
+        <div style={{
+          minHeight: '100vh',
+          background: '#111',
+          color: '#fff',
+          padding: '20px',
+          fontFamily: 'system-ui, sans-serif'
+        }}>
+          <h1 style={{ 
+            fontSize: '18px', 
+            fontWeight: 'normal', 
+            marginBottom: '20px',
+            color: '#888',
+            letterSpacing: '0.5px'
+          }}>
+            Linear Transformations — 3D
+          </h1>
+          
+          <div style={{ display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
+            {/* Controls */}
+            <div style={{ minWidth: '320px' }}>
+              {/* Vector inputs */}
+              {vectors.map((vec, i) => (
+                <div key={i} style={{ marginBottom: '20px' }}>
+                  <h2 style={{ fontSize: '12px', color: '#666', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    Vector {vectorLabels[i]}
+                  </h2>
+                  <Slider label="x" value={vec.x} onChange={(v) => handleVectorChange(i, 'x', v)} />
+                  <Slider label="y" value={vec.y} onChange={(v) => handleVectorChange(i, 'y', v)} />
+                  <Slider label="z" value={vec.z} onChange={(v) => handleVectorChange(i, 'z', v)} />
+                </div>
+              ))}
+              
+              {/* Matrix input */}
+              <div style={{ marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '12px', color: '#666', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  Transformation Matrix M
+                </h2>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(3, 55px)', 
+                  gap: '4px',
+                  marginBottom: '16px'
+                }}>
+                  {matrix.map((row, i) =>
+                    row.map((val, j) => (
+                      <input
+                        key={`${i}-${j}`}
+                        type="number"
+                        value={val}
+                        onChange={(e) => handleMatrixChange(i, j, parseInt(e.target.value) || 0)}
+                        step={1}
+                        style={{
+                          width: '55px',
+                          height: '36px',
+                          background: '#222',
+                          border: '1px solid #444',
+                          color: '#fff',
+                          textAlign: 'center',
+                          fontFamily: 'monospace',
+                          fontSize: '14px'
+                        }}
+                      />
+                    ))
+                  )}
+                </div>
+                
+                {/* Presets */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {Object.entries(presets).map(([key, preset]) => (
+                    <button
+                      key={key}
+                      onClick={() => applyPreset(key)}
+                      style={{
+                        padding: '6px 10px',
+                        background: '#222',
+                        border: '1px solid #444',
+                        color: '#888',
+                        cursor: 'pointer',
+                        fontFamily: 'monospace',
+                        fontSize: '11px'
+                      }}
+                    >
+                      {preset.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Results */}
+              <div style={{ 
+                background: '#1a1a1a', 
+                padding: '16px', 
+                border: '1px solid #333',
+                fontFamily: 'monospace',
+                fontSize: '13px'
+              }}>
+                <div style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #333' }}>
+                  <div style={{ color: '#666', marginBottom: '4px' }}>Original Volume</div>
+                  <div style={{ fontSize: '18px' }}>|det[v₁ v₂ v₃]| = {originalVolume}</div>
+                </div>
+                <div style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #333' }}>
+                  <div style={{ color: '#666', marginBottom: '4px' }}>det(M)</div>
+                  <div style={{ fontSize: '18px', color: matrixDet < 0 ? '#ff6666' : '#fff' }}>{matrixDet}</div>
+                </div>
+                <div>
+                  <div style={{ color: '#666', marginBottom: '4px' }}>Transformed Volume</div>
+                  <div style={{ fontSize: '18px' }}>|det(M)| × V = {transformedVolume}</div>
+                </div>
+              </div>
+              
+              {/* Legend */}
+              <div style={{ marginTop: '16px', fontSize: '12px', color: '#555' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <div style={{ width: '20px', height: '2px', background: '#555' }}></div>
+                  <span>Original parallelepiped</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '20px', height: '2px', background: '#fff' }}></div>
+                  <span>Transformed parallelepiped</span>
+                </div>
+                <div style={{ marginTop: '8px', color: '#ff6666' }}>
+                  Red det = orientation flipped
+                </div>
+              </div>
+            </div>
+            
+            {/* 3D View */}
+            <div 
+              ref={containerRef}
+              style={{ 
+                border: '1px solid #333',
+                width: '450px',
+                height: '450px'
+              }}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<TransformationVisualizer />, document.getElementById('root'));
+  </script>
+</body>
+</html>
