@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Line Visualization</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;500&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0f;
+            font-family: 'Outfit', sans-serif;
+            color: #e8e8e8;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #canvas-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+        
+        .info-panel {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            background: rgba(15, 15, 22, 0.92);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px 24px;
+            max-width: 320px;
+            z-index: 100;
+        }
+        
+        .info-panel h1 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 500;
+            font-size: 1.1rem;
+            color: #fff;
+            margin-bottom: 16px;
+            letter-spacing: 0.02em;
+        }
+        
+        .point-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border-left: 3px solid;
+        }
+        
+        .point-info.point-a {
+            border-left-color: #4ecdc4;
+        }
+        
+        .point-info.point-b {
+            border-left-color: #ff6b6b;
+        }
+        
+        .point-info.point-diag {
+            border-left-color: #f39c12;
+        }
+        
+        .point-info.point-intersect {
+            border-left-color: #ffffff;
+        }
+        
+        .point-marker {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        .point-a .point-marker {
+            background: #4ecdc4;
+            box-shadow: 0 0 12px rgba(78, 205, 196, 0.5);
+        }
+        
+        .point-b .point-marker {
+            background: #ff6b6b;
+            box-shadow: 0 0 12px rgba(255, 107, 107, 0.5);
+        }
+        
+        .point-diag .point-marker {
+            background: #f39c12;
+            box-shadow: 0 0 12px rgba(243, 156, 18, 0.5);
+        }
+        
+        .point-intersect .point-marker {
+            background: #ffffff;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+        }
+        
+        .point-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #ccc;
+        }
+        
+        .point-coords {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #fff;
+            margin-left: auto;
+        }
+        
+        .line-info {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .line-info p {
+            font-size: 0.85rem;
+            color: #888;
+            line-height: 1.5;
+        }
+        
+        .controls-hint {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            background: rgba(15, 15, 22, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 0.75rem;
+            color: #666;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .controls-hint span {
+            color: #888;
+        }
+        
+        .axis-legend {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(15, 15, 22, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 14px 18px;
+            display: flex;
+            gap: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+        }
+        
+        .axis-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .axis-color {
+            width: 16px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        
+        .axis-x { background: #e74c3c; }
+        .axis-y { background: #2ecc71; }
+        .axis-z { background: #3498db; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div class="info-panel">
+        <h1>Line Intersection</h1>
+        <div class="point-info point-a">
+            <div class="point-marker"></div>
+            <span class="point-label">Point A</span>
+            <span class="point-coords">(2, 1, 0)</span>
+        </div>
+        <div class="point-info point-b">
+            <div class="point-marker"></div>
+            <span class="point-label">Point B</span>
+            <span class="point-coords">(0, 1, 2)</span>
+        </div>
+        <div class="point-info point-diag">
+            <div class="point-marker"></div>
+            <span class="point-label">x = y = z</span>
+            <span class="point-coords" style="color: #f39c12;">diagonal</span>
+        </div>
+        <div class="point-info point-intersect">
+            <div class="point-marker"></div>
+            <span class="point-label">Intersection</span>
+            <span class="point-coords">(1, 1, 1)</span>
+        </div>
+        <div class="line-info">
+            <p>The cyan line (y=1, z=−x+2) intersects the orange diagonal (x=y=z) at (1,1,1).</p>
+        </div>
+    </div>
+    
+    <div class="controls-hint">
+        <span>Drag</span> rotate &nbsp;|&nbsp; <span>Scroll</span> zoom &nbsp;|&nbsp; <span>Right-drag</span> pan
+    </div>
+    
+    <div class="axis-legend">
+        <div class="axis-item">
+            <div class="axis-color axis-x"></div>
+            <span>X</span>
+        </div>
+        <div class="axis-item">
+            <div class="axis-color axis-y"></div>
+            <span>Y</span>
+        </div>
+        <div class="axis-item">
+            <div class="axis-color axis-z"></div>
+            <span>Z</span>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a0f);
+        
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+        
+        // Coordinate transformation: User coords (x,y,z) -> Three.js coords
+        // User wants: Z vertical (up), X right-to-left (+X left), Y left-to-right (+Y right)
+        // Mapping: user(x,y,z) -> THREE(-x, z, y)
+        function toThreeJS(x, y, z) {
+            return new THREE.Vector3(-x, z, y);
+        }
+        
+        // Points in user coordinates
+        const pointA_user = { x: 2, y: 1, z: 0 };
+        const pointB_user = { x: 0, y: 1, z: 2 };
+        
+        // Convert to Three.js coordinates
+        const pointA = toThreeJS(pointA_user.x, pointA_user.y, pointA_user.z);
+        const pointB = toThreeJS(pointB_user.x, pointB_user.y, pointB_user.z);
+        
+        // Create spheres for points
+        const sphereGeometry = new THREE.SphereGeometry(0.12, 32, 32);
+        
+        const materialA = new THREE.MeshBasicMaterial({ color: 0x4ecdc4 });
+        const sphereA = new THREE.Mesh(sphereGeometry, materialA);
+        sphereA.position.copy(pointA);
+        scene.add(sphereA);
+        
+        const materialB = new THREE.MeshBasicMaterial({ color: 0xff6b6b });
+        const sphereB = new THREE.Mesh(sphereGeometry, materialB);
+        sphereB.position.copy(pointB);
+        scene.add(sphereB);
+        
+        // Glow effect for points
+        const glowGeometry = new THREE.SphereGeometry(0.2, 32, 32);
+        const glowMaterialA = new THREE.MeshBasicMaterial({ 
+            color: 0x4ecdc4, 
+            transparent: true, 
+            opacity: 0.2 
+        });
+        const glowA = new THREE.Mesh(glowGeometry, glowMaterialA);
+        glowA.position.copy(pointA);
+        scene.add(glowA);
+        
+        const glowMaterialB = new THREE.MeshBasicMaterial({ 
+            color: 0xff6b6b, 
+            transparent: true, 
+            opacity: 0.2 
+        });
+        const glowB = new THREE.Mesh(glowGeometry, glowMaterialB);
+        glowB.position.copy(pointB);
+        scene.add(glowB);
+        
+        // Direction vector for the line (in Three.js space)
+        const direction = new THREE.Vector3().subVectors(pointB, pointA).normalize();
+        
+        // Create extended line through both points
+        const lineExtent = 8;
+        const lineStart = pointA.clone().sub(direction.clone().multiplyScalar(lineExtent));
+        const lineEnd = pointB.clone().add(direction.clone().multiplyScalar(lineExtent));
+        
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints([lineStart, lineEnd]);
+        const lineMaterial = new THREE.LineBasicMaterial({ 
+            color: 0x66d9ef,
+            transparent: true,
+            opacity: 0.8
+        });
+        const line = new THREE.Line(lineGeometry, lineMaterial);
+        scene.add(line);
+        
+        // Thicker segment between the two points
+        const segmentGeometry = new THREE.BufferGeometry().setFromPoints([pointA, pointB]);
+        const segmentMaterial = new THREE.LineBasicMaterial({ 
+            color: 0xffffff,
+            linewidth: 2
+        });
+        const segment = new THREE.Line(segmentGeometry, segmentMaterial);
+        scene.add(segment);
+        
+        // === Line x = y = z (the diagonal) ===
+        const diagStart = toThreeJS(-3, -3, -3);
+        const diagEnd = toThreeJS(4, 4, 4);
+        const diagGeometry = new THREE.BufferGeometry().setFromPoints([diagStart, diagEnd]);
+        const diagMaterial = new THREE.LineBasicMaterial({ 
+            color: 0xf39c12,
+            transparent: true,
+            opacity: 0.8
+        });
+        const diagLine = new THREE.Line(diagGeometry, diagMaterial);
+        scene.add(diagLine);
+        
+        // === Intersection point at (1, 1, 1) ===
+        const intersectionPoint = toThreeJS(1, 1, 1);
+        const intersectGeometry = new THREE.SphereGeometry(0.15, 32, 32);
+        const intersectMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const intersectSphere = new THREE.Mesh(intersectGeometry, intersectMaterial);
+        intersectSphere.position.copy(intersectionPoint);
+        scene.add(intersectSphere);
+        
+        // Glow for intersection point
+        const intersectGlowGeometry = new THREE.SphereGeometry(0.25, 32, 32);
+        const intersectGlowMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0xffffff, 
+            transparent: true, 
+            opacity: 0.3 
+        });
+        const intersectGlow = new THREE.Mesh(intersectGlowGeometry, intersectGlowMaterial);
+        intersectGlow.position.copy(intersectionPoint);
+        scene.add(intersectGlow);
+        
+        // Grid on XY plane (z=0 in user coords, y=0 in Three.js)
+        const gridHelper = new THREE.GridHelper(10, 10, 0x333344, 0x222233);
+        gridHelper.position.y = 0;
+        scene.add(gridHelper);
+        
+        // Create axes in user coordinate system
+        function createAxis(startUser, endUser, color) {
+            const start = toThreeJS(startUser.x, startUser.y, startUser.z);
+            const end = toThreeJS(endUser.x, endUser.y, endUser.z);
+            const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+            const material = new THREE.LineBasicMaterial({ color: color, linewidth: 2 });
+            return new THREE.Line(geometry, material);
+        }
+        
+        // Axes in user coordinates
+        const axisLength = 5;
+        // X axis: right to left (+X is left), red
+        scene.add(createAxis({x: -axisLength, y: 0, z: 0}, {x: axisLength, y: 0, z: 0}, 0xe74c3c));
+        // Y axis: left to right (+Y is right), green  
+        scene.add(createAxis({x: 0, y: -axisLength, z: 0}, {x: 0, y: axisLength, z: 0}, 0x2ecc71));
+        // Z axis: vertical (+Z is up), blue
+        scene.add(createAxis({x: 0, y: 0, z: -axisLength}, {x: 0, y: 0, z: axisLength}, 0x3498db));
+        
+        // Axis arrow tips in user coordinates
+        function createArrowHead(posUser, dirUser, color) {
+            const coneGeometry = new THREE.ConeGeometry(0.08, 0.25, 8);
+            const coneMaterial = new THREE.MeshBasicMaterial({ color: color });
+            const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+            const pos = toThreeJS(posUser.x, posUser.y, posUser.z);
+            cone.position.copy(pos);
+            
+            // Rotate cone to point in correct direction (in Three.js space)
+            if (dirUser.x !== 0) {
+                // X axis in user = -X in Three.js
+                cone.rotation.z = Math.PI / 2 * Math.sign(dirUser.x);
+            } else if (dirUser.y !== 0) {
+                // Y axis in user = Z in Three.js
+                cone.rotation.x = -Math.PI / 2 * Math.sign(dirUser.y);
+            } else if (dirUser.z !== 0) {
+                // Z axis in user = Y in Three.js
+                if (dirUser.z < 0) cone.rotation.x = Math.PI;
+            }
+            
+            return cone;
+        }
+        
+        scene.add(createArrowHead({x: axisLength, y: 0, z: 0}, {x: 1, y: 0, z: 0}, 0xe74c3c));
+        scene.add(createArrowHead({x: 0, y: axisLength, z: 0}, {x: 0, y: 1, z: 0}, 0x2ecc71));
+        scene.add(createArrowHead({x: 0, y: 0, z: axisLength}, {x: 0, y: 0, z: 1}, 0x3498db));
+        
+        // Coordinate tick marks in user coordinates
+        function createTicks() {
+            const tickGeometry = new THREE.BufferGeometry();
+            const tickPositions = [];
+            const tickSize = 0.1;
+            
+            for (let i = -4; i <= 4; i++) {
+                if (i === 0) continue;
+                // X axis ticks
+                const xTick1 = toThreeJS(i, 0, -tickSize);
+                const xTick2 = toThreeJS(i, 0, tickSize);
+                tickPositions.push(xTick1.x, xTick1.y, xTick1.z, xTick2.x, xTick2.y, xTick2.z);
+                
+                // Y axis ticks
+                const yTick1 = toThreeJS(0, i, -tickSize);
+                const yTick2 = toThreeJS(0, i, tickSize);
+                tickPositions.push(yTick1.x, yTick1.y, yTick1.z, yTick2.x, yTick2.y, yTick2.z);
+                
+                // Z axis ticks
+                const zTick1 = toThreeJS(-tickSize, 0, i);
+                const zTick2 = toThreeJS(tickSize, 0, i);
+                tickPositions.push(zTick1.x, zTick1.y, zTick1.z, zTick2.x, zTick2.y, zTick2.z);
+            }
+            
+            tickGeometry.setAttribute('position', new THREE.Float32BufferAttribute(tickPositions, 3));
+            const tickMaterial = new THREE.LineBasicMaterial({ color: 0x555566 });
+            return new THREE.LineSegments(tickGeometry, tickMaterial);
+        }
+        scene.add(createTicks());
+        
+        // Projection lines to help visualize position (in user coordinates)
+        function createProjectionLines(pu, color) {
+            const projGeometry = new THREE.BufferGeometry();
+            const p = toThreeJS(pu.x, pu.y, pu.z);
+            const pXY = toThreeJS(pu.x, pu.y, 0);
+            const pX = toThreeJS(pu.x, 0, 0);
+            const pY = toThreeJS(0, pu.y, 0);
+            
+            const positions = [
+                p.x, p.y, p.z, pXY.x, pXY.y, pXY.z,
+                pXY.x, pXY.y, pXY.z, pX.x, pX.y, pX.z,
+                pXY.x, pXY.y, pXY.z, pY.x, pY.y, pY.z,
+            ];
+            projGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            const projMaterial = new THREE.LineDashedMaterial({ 
+                color: color, 
+                dashSize: 0.1, 
+                gapSize: 0.05,
+                transparent: true,
+                opacity: 0.4
+            });
+            const projLines = new THREE.LineSegments(projGeometry, projMaterial);
+            projLines.computeLineDistances();
+            return projLines;
+        }
+        
+        scene.add(createProjectionLines(pointA_user, 0x4ecdc4));
+        scene.add(createProjectionLines(pointB_user, 0xff6b6b));
+        
+        // Camera controls - orbit around user coordinate origin
+        let isDragging = false;
+        let isPanning = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let spherical = { theta: -Math.PI / 4, phi: Math.PI / 3, radius: 10 };
+        let target = toThreeJS(1, 1, 1);
+        
+        function updateCameraPosition() {
+            camera.position.x = target.x + spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+            camera.position.y = target.y + spherical.radius * Math.cos(spherical.phi);
+            camera.position.z = target.z + spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+            camera.lookAt(target);
+        }
+        
+        updateCameraPosition();
+        
+        container.addEventListener('mousedown', (e) => {
+            if (e.button === 0) isDragging = true;
+            if (e.button === 2) isPanning = true;
+            previousMousePosition = { x: e.clientX, y: e.clientY };
+        });
+        
+        container.addEventListener('mouseup', () => {
+            isDragging = false;
+            isPanning = false;
+        });
+        
+        container.addEventListener('mouseleave', () => {
+            isDragging = false;
+            isPanning = false;
+        });
+        
+        container.addEventListener('mousemove', (e) => {
+            const deltaX = e.clientX - previousMousePosition.x;
+            const deltaY = e.clientY - previousMousePosition.y;
+            
+            if (isDragging) {
+                spherical.theta -= deltaX * 0.01;
+                spherical.phi -= deltaY * 0.01;
+                spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+                updateCameraPosition();
+            }
+            
+            if (isPanning) {
+                const panSpeed = 0.01;
+                const right = new THREE.Vector3();
+                const up = new THREE.Vector3();
+                camera.matrix.extractBasis(right, up, new THREE.Vector3());
+                target.add(right.multiplyScalar(-deltaX * panSpeed));
+                target.add(up.multiplyScalar(deltaY * panSpeed));
+                updateCameraPosition();
+            }
+            
+            previousMousePosition = { x: e.clientX, y: e.clientY };
+        });
+        
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            spherical.radius *= 1 + e.deltaY * 0.001;
+            spherical.radius = Math.max(2, Math.min(30, spherical.radius));
+            updateCameraPosition();
+        }, { passive: false });
+        
+        container.addEventListener('contextmenu', (e) => e.preventDefault());
+        
+        // Animation
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.02;
+            
+            const pulse = 0.15 + 0.1 * Math.sin(time * 2);
+            glowMaterialA.opacity = pulse;
+            glowMaterialB.opacity = pulse;
+            intersectGlowMaterial.opacity = 0.2 + 0.15 * Math.sin(time * 3);
+            
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
