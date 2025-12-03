@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elements as Linear Combinations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0f; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+const { useState } = React;
+
+// Complete element data with periodic table positions
+const elements = [
+  // Period 1
+  { symbol: 'H', name: 'Hydrogen', Z: 1, N: 0, e: 1, row: 1, col: 1 },
+  { symbol: 'He', name: 'Helium', Z: 2, N: 2, e: 2, row: 1, col: 18 },
+  // Period 2
+  { symbol: 'Li', name: 'Lithium', Z: 3, N: 4, e: 3, row: 2, col: 1 },
+  { symbol: 'Be', name: 'Beryllium', Z: 4, N: 5, e: 4, row: 2, col: 2 },
+  { symbol: 'B', name: 'Boron', Z: 5, N: 6, e: 5, row: 2, col: 13 },
+  { symbol: 'C', name: 'Carbon', Z: 6, N: 6, e: 6, row: 2, col: 14 },
+  { symbol: 'N', name: 'Nitrogen', Z: 7, N: 7, e: 7, row: 2, col: 15 },
+  { symbol: 'O', name: 'Oxygen', Z: 8, N: 8, e: 8, row: 2, col: 16 },
+  { symbol: 'F', name: 'Fluorine', Z: 9, N: 10, e: 9, row: 2, col: 17 },
+  { symbol: 'Ne', name: 'Neon', Z: 10, N: 10, e: 10, row: 2, col: 18 },
+  // Period 3
+  { symbol: 'Na', name: 'Sodium', Z: 11, N: 12, e: 11, row: 3, col: 1 },
+  { symbol: 'Mg', name: 'Magnesium', Z: 12, N: 12, e: 12, row: 3, col: 2 },
+  { symbol: 'Al', name: 'Aluminum', Z: 13, N: 14, e: 13, row: 3, col: 13 },
+  { symbol: 'Si', name: 'Silicon', Z: 14, N: 14, e: 14, row: 3, col: 14 },
+  { symbol: 'P', name: 'Phosphorus', Z: 15, N: 16, e: 15, row: 3, col: 15 },
+  { symbol: 'S', name: 'Sulfur', Z: 16, N: 16, e: 16, row: 3, col: 16 },
+  { symbol: 'Cl', name: 'Chlorine', Z: 17, N: 18, e: 17, row: 3, col: 17 },
+  { symbol: 'Ar', name: 'Argon', Z: 18, N: 22, e: 18, row: 3, col: 18 },
+  // Period 4
+  { symbol: 'K', name: 'Potassium', Z: 19, N: 20, e: 19, row: 4, col: 1 },
+  { symbol: 'Ca', name: 'Calcium', Z: 20, N: 20, e: 20, row: 4, col: 2 },
+  { symbol: 'Sc', name: 'Scandium', Z: 21, N: 24, e: 21, row: 4, col: 3 },
+  { symbol: 'Ti', name: 'Titanium', Z: 22, N: 26, e: 22, row: 4, col: 4 },
+  { symbol: 'V', name: 'Vanadium', Z: 23, N: 28, e: 23, row: 4, col: 5 },
+  { symbol: 'Cr', name: 'Chromium', Z: 24, N: 28, e: 24, row: 4, col: 6 },
+  { symbol: 'Mn', name: 'Manganese', Z: 25, N: 30, e: 25, row: 4, col: 7 },
+  { symbol: 'Fe', name: 'Iron', Z: 26, N: 30, e: 26, row: 4, col: 8 },
+  { symbol: 'Co', name: 'Cobalt', Z: 27, N: 32, e: 27, row: 4, col: 9 },
+  { symbol: 'Ni', name: 'Nickel', Z: 28, N: 31, e: 28, row: 4, col: 10 },
+  { symbol: 'Cu', name: 'Copper', Z: 29, N: 35, e: 29, row: 4, col: 11 },
+  { symbol: 'Zn', name: 'Zinc', Z: 30, N: 35, e: 30, row: 4, col: 12 },
+  { symbol: 'Ga', name: 'Gallium', Z: 31, N: 39, e: 31, row: 4, col: 13 },
+  { symbol: 'Ge', name: 'Germanium', Z: 32, N: 41, e: 32, row: 4, col: 14 },
+  { symbol: 'As', name: 'Arsenic', Z: 33, N: 42, e: 33, row: 4, col: 15 },
+  { symbol: 'Se', name: 'Selenium', Z: 34, N: 45, e: 34, row: 4, col: 16 },
+  { symbol: 'Br', name: 'Bromine', Z: 35, N: 45, e: 35, row: 4, col: 17 },
+  { symbol: 'Kr', name: 'Krypton', Z: 36, N: 48, e: 36, row: 4, col: 18 },
+  // Period 5
+  { symbol: 'Rb', name: 'Rubidium', Z: 37, N: 48, e: 37, row: 5, col: 1 },
+  { symbol: 'Sr', name: 'Strontium', Z: 38, N: 50, e: 38, row: 5, col: 2 },
+  { symbol: 'Y', name: 'Yttrium', Z: 39, N: 50, e: 39, row: 5, col: 3 },
+  { symbol: 'Zr', name: 'Zirconium', Z: 40, N: 51, e: 40, row: 5, col: 4 },
+  { symbol: 'Nb', name: 'Niobium', Z: 41, N: 52, e: 41, row: 5, col: 5 },
+  { symbol: 'Mo', name: 'Molybdenum', Z: 42, N: 54, e: 42, row: 5, col: 6 },
+  { symbol: 'Tc', name: 'Technetium', Z: 43, N: 55, e: 43, row: 5, col: 7 },
+  { symbol: 'Ru', name: 'Ruthenium', Z: 44, N: 57, e: 44, row: 5, col: 8 },
+  { symbol: 'Rh', name: 'Rhodium', Z: 45, N: 58, e: 45, row: 5, col: 9 },
+  { symbol: 'Pd', name: 'Palladium', Z: 46, N: 60, e: 46, row: 5, col: 10 },
+  { symbol: 'Ag', name: 'Silver', Z: 47, N: 61, e: 47, row: 5, col: 11 },
+  { symbol: 'Cd', name: 'Cadmium', Z: 48, N: 64, e: 48, row: 5, col: 12 },
+  { symbol: 'In', name: 'Indium', Z: 49, N: 66, e: 49, row: 5, col: 13 },
+  { symbol: 'Sn', name: 'Tin', Z: 50, N: 69, e: 50, row: 5, col: 14 },
+  { symbol: 'Sb', name: 'Antimony', Z: 51, N: 71, e: 51, row: 5, col: 15 },
+  { symbol: 'Te', name: 'Tellurium', Z: 52, N: 76, e: 52, row: 5, col: 16 },
+  { symbol: 'I', name: 'Iodine', Z: 53, N: 74, e: 53, row: 5, col: 17 },
+  { symbol: 'Xe', name: 'Xenon', Z: 54, N: 77, e: 54, row: 5, col: 18 },
+  // Period 6 (partial)
+  { symbol: 'Cs', name: 'Cesium', Z: 55, N: 78, e: 55, row: 6, col: 1 },
+  { symbol: 'Ba', name: 'Barium', Z: 56, N: 81, e: 56, row: 6, col: 2 },
+  { symbol: 'Hf', name: 'Hafnium', Z: 72, N: 106, e: 72, row: 6, col: 4 },
+  { symbol: 'Ta', name: 'Tantalum', Z: 73, N: 108, e: 73, row: 6, col: 5 },
+  { symbol: 'W', name: 'Tungsten', Z: 74, N: 110, e: 74, row: 6, col: 6 },
+  { symbol: 'Re', name: 'Rhenium', Z: 75, N: 111, e: 75, row: 6, col: 7 },
+  { symbol: 'Os', name: 'Osmium', Z: 76, N: 114, e: 76, row: 6, col: 8 },
+  { symbol: 'Ir', name: 'Iridium', Z: 77, N: 115, e: 77, row: 6, col: 9 },
+  { symbol: 'Pt', name: 'Platinum', Z: 78, N: 117, e: 78, row: 6, col: 10 },
+  { symbol: 'Au', name: 'Gold', Z: 79, N: 118, e: 79, row: 6, col: 11 },
+  { symbol: 'Hg', name: 'Mercury', Z: 80, N: 121, e: 80, row: 6, col: 12 },
+  { symbol: 'Tl', name: 'Thallium', Z: 81, N: 123, e: 81, row: 6, col: 13 },
+  { symbol: 'Pb', name: 'Lead', Z: 82, N: 125, e: 82, row: 6, col: 14 },
+  { symbol: 'Bi', name: 'Bismuth', Z: 83, N: 126, e: 83, row: 6, col: 15 },
+  { symbol: 'Po', name: 'Polonium', Z: 84, N: 125, e: 84, row: 6, col: 16 },
+  { symbol: 'At', name: 'Astatine', Z: 85, N: 125, e: 85, row: 6, col: 17 },
+  { symbol: 'Rn', name: 'Radon', Z: 86, N: 136, e: 86, row: 6, col: 18 },
+  // Period 7 (partial)
+  { symbol: 'Fr', name: 'Francium', Z: 87, N: 136, e: 87, row: 7, col: 1 },
+  { symbol: 'Ra', name: 'Radium', Z: 88, N: 138, e: 88, row: 7, col: 2 },
+  // Lanthanides
+  { symbol: 'La', name: 'Lanthanum', Z: 57, N: 82, e: 57, row: 9, col: 3 },
+  { symbol: 'Ce', name: 'Cerium', Z: 58, N: 82, e: 58, row: 9, col: 4 },
+  { symbol: 'Nd', name: 'Neodymium', Z: 60, N: 84, e: 60, row: 9, col: 6 },
+  { symbol: 'Sm', name: 'Samarium', Z: 62, N: 88, e: 62, row: 9, col: 8 },
+  { symbol: 'Eu', name: 'Europium', Z: 63, N: 89, e: 63, row: 9, col: 9 },
+  { symbol: 'Gd', name: 'Gadolinium', Z: 64, N: 93, e: 64, row: 9, col: 10 },
+  { symbol: 'Dy', name: 'Dysprosium', Z: 66, N: 97, e: 66, row: 9, col: 12 },
+  { symbol: 'Lu', name: 'Lutetium', Z: 71, N: 104, e: 71, row: 9, col: 17 },
+  // Actinides
+  { symbol: 'Ac', name: 'Actinium', Z: 89, N: 138, e: 89, row: 10, col: 3 },
+  { symbol: 'Th', name: 'Thorium', Z: 90, N: 142, e: 90, row: 10, col: 4 },
+  { symbol: 'U', name: 'Uranium', Z: 92, N: 146, e: 92, row: 10, col: 6 },
+  { symbol: 'Pu', name: 'Plutonium', Z: 94, N: 150, e: 94, row: 10, col: 8 },
+];
+
+// Vertical vector component with proper bracket notation
+const VerticalVector = ({ values, color = '#4a9eff', size = 'normal', showLabels = false }) => {
+  const config = {
+    small: { fontSize: '10px', padding: '2px 6px', gap: '0px', bracketWidth: '3px' },
+    normal: { fontSize: '14px', padding: '4px 10px', gap: '2px', bracketWidth: '4px' },
+    large: { fontSize: '20px', padding: '8px 14px', gap: '4px', bracketWidth: '5px' },
+  }[size];
+  
+  const labels = ['p', 'n', 'e'];
+  
+  return (
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'stretch',
+      fontFamily: '"JetBrains Mono", monospace',
+    }}>
+      {/* Left bracket */}
+      <div style={{
+        borderLeft: `2px solid ${color}`,
+        borderTop: `2px solid ${color}`,
+        borderBottom: `2px solid ${color}`,
+        width: config.bracketWidth,
+        borderRadius: '3px 0 0 3px',
+        opacity: 0.8,
+      }} />
+      
+      {/* Values column */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        padding: config.padding,
+        gap: config.gap,
+      }}>
+        {values.map((val, i) => (
+          <div key={i} style={{
+            fontSize: config.fontSize,
+            color: color,
+            lineHeight: 1.1,
+            fontVariantNumeric: 'tabular-nums',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}>
+            <span>{val}</span>
+            {showLabels && (
+              <span style={{ 
+                color: '#444', 
+                fontSize: size === 'large' ? '12px' : '9px',
+                fontWeight: 400,
+              }}>
+                {labels[i]}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+      
+      {/* Right bracket */}
+      <div style={{
+        borderRight: `2px solid ${color}`,
+        borderTop: `2px solid ${color}`,
+        borderBottom: `2px solid ${color}`,
+        width: config.bracketWidth,
+        borderRadius: '0 3px 3px 0',
+        opacity: 0.8,
+      }} />
+    </div>
+  );
+};
+
+// Scalar times vector
+const ScalarVector = ({ scalar, values, color, size = 'small' }) => (
+  <div style={{
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '3px',
+  }}>
+    <span style={{ 
+      color: color, 
+      fontSize: size === 'small' ? '13px' : '18px',
+      fontWeight: 500,
+      minWidth: size === 'small' ? '20px' : '32px',
+      textAlign: 'right',
+    }}>
+      {scalar}
+    </span>
+    <span style={{ color: '#333', fontSize: size === 'small' ? '10px' : '14px' }}>·</span>
+    <VerticalVector values={values} color={color} size={size} />
+  </div>
+);
+
+// Full linear combination display
+const LinearCombination = ({ element, size = 'normal' }) => {
+  const { Z, N, e } = element;
+  const gap = size === 'large' ? '16px' : '8px';
+  const plusSize = size === 'large' ? '20px' : '14px';
+  
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: gap,
+      flexWrap: 'wrap',
+    }}>
+      <ScalarVector scalar={Z} values={[1, 0, 0]} color="#22c55e" size={size === 'large' ? 'normal' : 'small'} />
+      <span style={{ color: '#444', fontSize: plusSize }}>+</span>
+      <ScalarVector scalar={N} values={[0, 1, 0]} color="#f59e0b" size={size === 'large' ? 'normal' : 'small'} />
+      <span style={{ color: '#444', fontSize: plusSize }}>+</span>
+      <ScalarVector scalar={e} values={[0, 0, 1]} color="#ef4444" size={size === 'large' ? 'normal' : 'small'} />
+    </div>
+  );
+};
+
+// Element cell in periodic table
+const ElementCell = ({ element, isSelected, onSelect }) => {
+  const { symbol, Z, N, e } = element;
+  
+  return (
+    <div
+      onClick={() => onSelect(element)}
+      style={{
+        background: isSelected ? 'rgba(74, 158, 255, 0.15)' : 'rgba(255,255,255,0.03)',
+        border: isSelected ? '1px solid #4a9eff' : '1px solid #222',
+        padding: '6px',
+        cursor: 'pointer',
+        transition: 'all 0.15s',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '4px',
+        minWidth: '50px',
+        minHeight: '65px',
+      }}
+      onMouseEnter={(e) => {
+        if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+      }}
+    >
+      <div style={{
+        fontSize: '16px',
+        fontWeight: 600,
+        color: isSelected ? '#4a9eff' : '#fff',
+      }}>
+        {symbol}
+      </div>
+      <VerticalVector values={[Z, N, e]} size="small" color={isSelected ? '#4a9eff' : '#555'} />
+    </div>
+  );
+};
+
+function PeriodicVectors() {
+  const [selectedElement, setSelectedElement] = useState(elements.find(e => e.symbol === 'Au'));
+  const [viewMode, setViewMode] = useState('table');
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#0a0a0f',
+      color: '#e8e6e3',
+      fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+      padding: '40px',
+    }}>
+      {/* Header */}
+      <header style={{ marginBottom: '40px' }}>
+        <h1 style={{
+          fontSize: '13px',
+          fontWeight: 400,
+          letterSpacing: '0.3em',
+          textTransform: 'uppercase',
+          color: '#6b6b6b',
+          marginBottom: '16px',
+        }}>
+          Elements as Linear Combinations
+        </h1>
+        <p style={{
+          fontSize: '26px',
+          fontWeight: 300,
+          lineHeight: 1.4,
+          maxWidth: '800px',
+          color: '#ffffff',
+        }}>
+          Every element is a weighted sum of three basis vectors.
+        </p>
+      </header>
+
+      {/* Basis Legend */}
+      <div style={{
+        display: 'flex',
+        gap: '40px',
+        marginBottom: '40px',
+        padding: '28px',
+        background: 'linear-gradient(135deg, rgba(74, 158, 255, 0.06) 0%, transparent 100%)',
+        borderLeft: '3px solid #4a9eff',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+      }}>
+        <div style={{ 
+          fontSize: '11px', 
+          color: '#6b6b6b', 
+          letterSpacing: '0.2em',
+          textTransform: 'uppercase',
+        }}>
+          Basis Vectors
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ color: '#22c55e', fontWeight: 600, fontSize: '15px' }}>p</span>
+          <span style={{ color: '#444' }}>=</span>
+          <VerticalVector values={[1, 0, 0]} size="normal" color="#22c55e" />
+          <span style={{ color: '#555', fontSize: '12px', marginLeft: '4px' }}>proton</span>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ color: '#f59e0b', fontWeight: 600, fontSize: '15px' }}>n</span>
+          <span style={{ color: '#444' }}>=</span>
+          <VerticalVector values={[0, 1, 0]} size="normal" color="#f59e0b" />
+          <span style={{ color: '#555', fontSize: '12px', marginLeft: '4px' }}>neutron</span>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '15px' }}>e</span>
+          <span style={{ color: '#444' }}>=</span>
+          <VerticalVector values={[0, 0, 1]} size="normal" color="#ef4444" />
+          <span style={{ color: '#555', fontSize: '12px', marginLeft: '4px' }}>electron</span>
+        </div>
+        
+        <div style={{ 
+          marginLeft: 'auto', 
+          fontSize: '14px', 
+          color: '#666',
+          fontStyle: 'italic',
+        }}>
+          dim = 3
+        </div>
+      </div>
+
+      {/* View Toggle */}
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        marginBottom: '32px',
+      }}>
+        {['table', 'vectors'].map(mode => (
+          <button
+            key={mode}
+            onClick={() => setViewMode(mode)}
+            style={{
+              padding: '12px 24px',
+              background: viewMode === mode ? '#4a9eff' : 'transparent',
+              border: `1px solid ${viewMode === mode ? '#4a9eff' : '#333'}`,
+              color: viewMode === mode ? '#000' : '#888',
+              fontSize: '11px',
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            {mode === 'table' ? 'Periodic Table' : 'Vector Cards'}
+          </button>
+        ))}
+      </div>
+
+      {viewMode === 'table' && (
+        <div style={{
+          display: 'flex',
+          gap: '32px',
+          flexWrap: 'wrap',
+        }}>
+          {/* Periodic Table Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(18, 1fr)',
+            gridTemplateRows: 'repeat(10, auto)',
+            gap: '3px',
+            maxWidth: '1100px',
+            flexShrink: 0,
+          }}>
+            {elements.map(el => (
+              <div
+                key={el.symbol}
+                style={{
+                  gridColumn: el.col,
+                  gridRow: el.row,
+                }}
+              >
+                <ElementCell
+                  element={el}
+                  isSelected={selectedElement?.symbol === el.symbol}
+                  onSelect={setSelectedElement}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Selected Element Detail - now on the right */}
+          {selectedElement && (
+            <div style={{
+              padding: '36px',
+              background: 'rgba(74, 158, 255, 0.06)',
+              border: '1px solid #1a1a2e',
+              maxWidth: '480px',
+              alignSelf: 'flex-start',
+            }}>
+              {/* Element header */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: '20px',
+                marginBottom: '32px',
+              }}>
+                <span style={{ fontSize: '56px', fontWeight: 300, color: '#4a9eff' }}>
+                  {selectedElement.symbol}
+                </span>
+                <span style={{ fontSize: '22px', color: '#555' }}>
+                  {selectedElement.name}
+                </span>
+              </div>
+
+              {/* The equation */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '20px',
+                marginBottom: '28px',
+                flexWrap: 'wrap',
+              }}>
+                <span style={{ fontSize: '28px', color: '#fff', fontWeight: 300 }}>
+                  {selectedElement.symbol}
+                </span>
+                <span style={{ fontSize: '28px', color: '#333' }}>=</span>
+                <LinearCombination element={selectedElement} size="large" />
+              </div>
+
+              {/* Result */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '20px',
+                padding: '24px',
+                background: 'rgba(0,0,0,0.4)',
+                borderRadius: '4px',
+              }}>
+                <span style={{ fontSize: '20px', color: '#555' }}>=</span>
+                <VerticalVector 
+                  values={[selectedElement.Z, selectedElement.N, selectedElement.e]} 
+                  size="large" 
+                  color="#4a9eff"
+                  showLabels={true}
+                />
+                <div style={{ marginLeft: '24px', fontSize: '14px', color: '#666', lineHeight: 1.8 }}>
+                  The coordinates of <span style={{ color: '#4a9eff' }}>{selectedElement.name}</span> in the 
+                  standard basis of matter.
+                </div>
+              </div>
+
+              {/* Constraint */}
+              {selectedElement.Z === selectedElement.e && (
+                <div style={{
+                  marginTop: '24px',
+                  padding: '16px 20px',
+                  background: 'rgba(34, 197, 94, 0.08)',
+                  borderLeft: '3px solid #22c55e',
+                  fontSize: '13px',
+                  color: '#888',
+                }}>
+                  <strong style={{ color: '#22c55e' }}>Neutral atom:</strong>{' '}
+                  <span style={{ color: '#22c55e' }}>protons</span> = <span style={{ color: '#ef4444' }}>electrons</span> = {selectedElement.Z}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {viewMode === 'vectors' && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+          gap: '16px',
+          maxWidth: '1400px',
+        }}>
+          {elements.map(el => (
+            <div
+              key={el.symbol}
+              onClick={() => setSelectedElement(el)}
+              style={{
+                padding: '20px 24px',
+                background: selectedElement?.symbol === el.symbol 
+                  ? 'rgba(74, 158, 255, 0.1)' 
+                  : 'rgba(255,255,255,0.02)',
+                border: selectedElement?.symbol === el.symbol 
+                  ? '1px solid #4a9eff' 
+                  : '1px solid #1a1a1a',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              {/* Element name and symbol */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: '12px',
+                marginBottom: '16px',
+              }}>
+                <span style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 500, 
+                  color: selectedElement?.symbol === el.symbol ? '#4a9eff' : '#fff',
+                }}>
+                  {el.symbol}
+                </span>
+                <span style={{ color: '#444', fontSize: '14px' }}>{el.name}</span>
+                <span style={{ color: '#333', fontSize: '18px', marginLeft: 'auto' }}>=</span>
+              </div>
+
+              {/* Linear combination */}
+              <LinearCombination element={el} size="normal" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Footer */}
+      <footer style={{
+        marginTop: '64px',
+        paddingTop: '32px',
+        borderTop: '1px solid #1a1a1a',
+        maxWidth: '700px',
+      }}>
+        <div style={{ fontSize: '14px', color: '#444', lineHeight: 1.9 }}>
+          <p>
+            Three vectors. Three scalars per element. 
+            That's the alphabet of matter.
+          </p>
+          <p style={{ marginTop: '16px' }}>
+            The periodic table is not a list of 118 fundamental objects.
+            It is 118 points in a 3-dimensional integer lattice — 
+            <span style={{ color: '#4a9eff' }}> ℤ³</span>.
+          </p>
+          <p style={{ marginTop: '16px', color: '#333' }}>
+            The atoms of chemistry are combinations. The basis is smaller.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<PeriodicVectors />);
+  </script>
+</body>
+</html>
