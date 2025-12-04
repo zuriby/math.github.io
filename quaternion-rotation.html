@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quaternion Rotation Visualization</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useRef, useEffect, useCallback } = React;
+
+    const QuaternionRotationViz = () => {
+      // Quaternion components: q = w + xi + yj + zk
+      // For rotation: w = cos(θ/2), (x,y,z) = sin(θ/2) * axis
+      const [angle, setAngle] = useState(0); // rotation angle in degrees
+      const [axis, setAxis] = useState({ i: 1, j: 0, k: 0 }); // rotation axis
+      const [autoRotate, setAutoRotate] = useState(true);
+      const [showAxes, setShowAxes] = useState(true);
+      const [viewRotation, setViewRotation] = useState({ theta: 0.4, phi: 0.3 });
+      const canvasRef = useRef(null);
+      const isDragging = useRef(false);
+      const lastMouse = useRef({ x: 0, y: 0 });
+
+      // Normalize the axis
+      const normalizeAxis = useCallback(() => {
+        const len = Math.sqrt(axis.i ** 2 + axis.j ** 2 + axis.k ** 2);
+        if (len < 0.001) return { i: 1, j: 0, k: 0 };
+        return { i: axis.i / len, j: axis.j / len, k: axis.k / len };
+      }, [axis]);
+
+      // Convert axis-angle to quaternion
+      const getQuaternion = useCallback(() => {
+        const normAxis = normalizeAxis();
+        const halfAngleRad = (angle * Math.PI) / 360; // half angle in radians
+        const sinHalf = Math.sin(halfAngleRad);
+        const cosHalf = Math.cos(halfAngleRad);
+        return {
+          w: cosHalf,
+          x: sinHalf * normAxis.i,
+          y: sinHalf * normAxis.j,
+          z: sinHalf * normAxis.k
+        };
+      }, [angle, normalizeAxis]);
+
+      // Quaternion multiplication
+      const quatMultiply = (q1, q2) => ({
+        w: q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z,
+        x: q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y,
+        y: q1.w * q2.y - q1.x * q2.z + q1.y * q2.w + q1.z * q2.x,
+        z: q1.w * q2.z + q1.x * q2.y - q1.y * q2.x + q1.z * q2.w
+      });
+
+      // Rotate a 3D point by quaternion: p' = q * p * q^(-1)
+      const rotatePoint = useCallback((point, quat) => {
+        // Convert point to quaternion (w=0)
+        const p = { w: 0, x: point.x, y: point.y, z: point.z };
+        // Conjugate of q
+        const qConj = { w: quat.w, x: -quat.x, y: -quat.y, z: -quat.z };
+        // q * p * q^(-1)
+        const result = quatMultiply(quatMultiply(quat, p), qConj);
+        return { x: result.x, y: result.y, z: result.z };
+      }, []);
+
+      // Auto-rotation animation
+      useEffect(() => {
+        if (!autoRotate) return;
+        const interval = setInterval(() => {
+          setAngle(a => (a + 0.8) % 360);
+        }, 20);
+        return () => clearInterval(interval);
+      }, [autoRotate]);
+
+      // Mouse drag for view rotation
+      const handleMouseDown = (e) => {
+        isDragging.current = true;
+        lastMouse.current = { x: e.clientX, y: e.clientY };
+      };
+
+      const handleMouseMove = (e) => {
+        if (!isDragging.current) return;
+        const dx = e.clientX - lastMouse.current.x;
+        const dy = e.clientY - lastMouse.current.y;
+        setViewRotation(v => ({
+          theta: v.theta + dx * 0.01,
+          phi: Math.max(-1.5, Math.min(1.5, v.phi + dy * 0.01))
+        }));
+        lastMouse.current = { x: e.clientX, y: e.clientY };
+      };
+
+      const handleMouseUp = () => {
+        isDragging.current = false;
+      };
+
+      // Main rendering
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+        const cx = W / 2;
+        const cy = H / 2;
+        const scale = 120;
+
+        ctx.fillStyle = '#0a0f1a';
+        ctx.fillRect(0, 0, W, H);
+
+        const quat = getQuaternion();
+        const { theta, phi } = viewRotation;
+
+        // Project 3D to 2D with view rotation
+        const project = (p) => {
+          // Apply view rotation (camera orbit)
+          const cosT = Math.cos(theta), sinT = Math.sin(theta);
+          const cosP = Math.cos(phi), sinP = Math.sin(phi);
+          
+          // Rotate around Y (theta), then around X (phi)
+          const x1 = p.x * cosT - p.z * sinT;
+          const z1 = p.x * sinT + p.z * cosT;
+          const y1 = p.y * cosP - z1 * sinP;
+          const z2 = p.y * sinP + z1 * cosP;
+          
+          // Simple perspective
+          const perspective = 4 / (4 - z2 * 0.3);
+          return {
+            x: cx + x1 * scale * perspective,
+            y: cy - y1 * scale * perspective,
+            z: z2,
+            scale: perspective
+          };
+        };
+
+        // Draw a line in 3D
+        const drawLine3D = (p1, p2, color, width = 1) => {
+          const proj1 = project(p1);
+          const proj2 = project(p2);
+          ctx.beginPath();
+          ctx.moveTo(proj1.x, proj1.y);
+          ctx.lineTo(proj2.x, proj2.y);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = width;
+          ctx.stroke();
+        };
+
+        // Generate sphere points
+        const spherePoints = [];
+        const latLines = [];
+        const lonLines = [];
+        
+        // Latitude lines
+        for (let lat = -75; lat <= 75; lat += 25) {
+          const latRad = (lat * Math.PI) / 180;
+          const r = Math.cos(latRad);
+          const y = Math.sin(latRad);
+          const line = [];
+          for (let lon = 0; lon <= 360; lon += 10) {
+            const lonRad = (lon * Math.PI) / 180;
+            line.push({ x: r * Math.cos(lonRad), y: y, z: r * Math.sin(lonRad) });
+          }
+          latLines.push(line);
+        }
+
+        // Longitude lines
+        for (let lon = 0; lon < 360; lon += 30) {
+          const lonRad = (lon * Math.PI) / 180;
+          const line = [];
+          for (let lat = -90; lat <= 90; lat += 10) {
+            const latRad = (lat * Math.PI) / 180;
+            const r = Math.cos(latRad);
+            const y = Math.sin(latRad);
+            line.push({ x: r * Math.cos(lonRad), y: y, z: r * Math.sin(lonRad) });
+          }
+          lonLines.push(line);
+        }
+
+        // Special marker points (to show rotation clearly)
+        const markers = [
+          { point: { x: 1, y: 0, z: 0 }, color: '#ef4444' },   // +X red
+          { point: { x: 0, y: 1, z: 0 }, color: '#22c55e' },   // +Y green  
+          { point: { x: 0, y: 0, z: 1 }, color: '#3b82f6' },   // +Z blue
+          { point: { x: -1, y: 0, z: 0 }, color: '#ef444480' },
+          { point: { x: 0, y: -1, z: 0 }, color: '#22c55e80' },
+          { point: { x: 0, y: 0, z: -1 }, color: '#3b82f680' },
+        ];
+
+        // Draw i, j, k axes (before rotation - these are the rotation generators)
+        if (showAxes) {
+          const axisLen = 1.8;
+          // i axis (X) - red
+          drawLine3D({ x: -axisLen, y: 0, z: 0 }, { x: axisLen, y: 0, z: 0 }, 'rgba(239, 68, 68, 0.6)', 2);
+          // j axis (Y) - green
+          drawLine3D({ x: 0, y: -axisLen, z: 0 }, { x: 0, y: axisLen, z: 0 }, 'rgba(34, 197, 94, 0.6)', 2);
+          // k axis (Z) - blue
+          drawLine3D({ x: 0, y: 0, z: -axisLen }, { x: 0, y: 0, z: axisLen }, 'rgba(59, 130, 246, 0.6)', 2);
+
+          // Axis labels
+          ctx.font = 'bold 14px system-ui';
+          const iLabel = project({ x: axisLen + 0.2, y: 0, z: 0 });
+          const jLabel = project({ x: 0, y: axisLen + 0.2, z: 0 });
+          const kLabel = project({ x: 0, y: 0, z: axisLen + 0.2 });
+          ctx.fillStyle = '#ef4444';
+          ctx.fillText('i', iLabel.x, iLabel.y);
+          ctx.fillStyle = '#22c55e';
+          ctx.fillText('j', jLabel.x, jLabel.y);
+          ctx.fillStyle = '#3b82f6';
+          ctx.fillText('k', kLabel.x, kLabel.y);
+        }
+
+        // Draw current rotation axis
+        const normAxis = normalizeAxis();
+        const axisEnd = { x: normAxis.i * 1.6, y: normAxis.j * 1.6, z: normAxis.k * 1.6 };
+        const axisEndNeg = { x: -normAxis.i * 1.6, y: -normAxis.j * 1.6, z: -normAxis.k * 1.6 };
+        drawLine3D(axisEndNeg, axisEnd, '#fbbf24', 3);
+        
+        // Arrow head for rotation axis
+        const axisProj = project(axisEnd);
+        ctx.beginPath();
+        ctx.arc(axisProj.x, axisProj.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#fbbf24';
+        ctx.fill();
+
+        // Draw sphere wireframe (rotated)
+        ctx.globalAlpha = 0.4;
+        
+        // Draw latitude lines
+        latLines.forEach(line => {
+          ctx.beginPath();
+          line.forEach((p, i) => {
+            const rotated = rotatePoint(p, quat);
+            const proj = project(rotated);
+            if (i === 0) ctx.moveTo(proj.x, proj.y);
+            else ctx.lineTo(proj.x, proj.y);
+          });
+          ctx.strokeStyle = '#06b6d4';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        });
+
+        // Draw longitude lines
+        lonLines.forEach(line => {
+          ctx.beginPath();
+          line.forEach((p, i) => {
+            const rotated = rotatePoint(p, quat);
+            const proj = project(rotated);
+            if (i === 0) ctx.moveTo(proj.x, proj.y);
+            else ctx.lineTo(proj.x, proj.y);
+          });
+          ctx.strokeStyle = '#06b6d4';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        });
+
+        ctx.globalAlpha = 1;
+
+        // Draw marker points (rotated)
+        markers.forEach(({ point, color }) => {
+          const rotated = rotatePoint(point, quat);
+          const proj = project(rotated);
+          
+          // Draw trail arc showing rotation path
+          if (point.x === 1 && point.y === 0 && point.z === 0) {
+            ctx.beginPath();
+            for (let a = 0; a <= angle; a += 2) {
+              const tempQuat = {
+                w: Math.cos((a * Math.PI) / 360),
+                x: Math.sin((a * Math.PI) / 360) * normAxis.i,
+                y: Math.sin((a * Math.PI) / 360) * normAxis.j,
+                z: Math.sin((a * Math.PI) / 360) * normAxis.k
+              };
+              const trailPoint = rotatePoint(point, tempQuat);
+              const trailProj = project(trailPoint);
+              if (a === 0) ctx.moveTo(trailProj.x, trailProj.y);
+              else ctx.lineTo(trailProj.x, trailProj.y);
+            }
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+
+          ctx.beginPath();
+          ctx.arc(proj.x, proj.y, 8 * proj.scale, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        });
+
+      }, [angle, axis, viewRotation, showAxes, getQuaternion, rotatePoint, normalizeAxis]);
+
+      const quat = getQuaternion();
+
+      // Preset axis buttons
+      const setAxisPreset = (i, j, k) => {
+        setAxis({ i, j, k });
+        setAngle(0);
+      };
+
+      return (
+        <div className="flex flex-col items-center p-6 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 min-h-screen text-slate-100">
+          <h1 className="text-2xl font-light tracking-wide mb-1">
+            Quaternion Rotation
+          </h1>
+          <p className="text-slate-400 text-sm text-center max-w-xl mb-4">
+            The three imaginary axes <span className="text-red-400 font-mono">i</span>, 
+            <span className="text-green-400 font-mono"> j</span>, 
+            <span className="text-blue-400 font-mono"> k</span> generate rotations in 3D space.
+            The <span className="text-yellow-400">yellow axis</span> shows the current rotation axis.
+          </p>
+
+          {/* Main Canvas */}
+          <div 
+            className="relative rounded-xl overflow-hidden border border-slate-700 shadow-2xl mb-5 cursor-grab active:cursor-grabbing"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          >
+            <canvas ref={canvasRef} width={550} height={420} className="block" />
+            <div className="absolute top-3 left-3 text-[10px] text-slate-500 tracking-wide">
+              DRAG TO ORBIT VIEW
+            </div>
+          </div>
+
+          {/* Quaternion Display */}
+          <div className="mb-5 px-5 py-3 bg-slate-900/60 rounded-lg border border-slate-700 text-center">
+            <div className="text-xs text-slate-500 mb-2">Quaternion q = w + xi + yj + zk</div>
+            <code className="font-mono text-lg">
+              <span className="text-slate-300">{quat.w.toFixed(3)}</span>
+              <span className="text-red-400"> {quat.x >= 0 ? '+' : '−'} {Math.abs(quat.x).toFixed(3)}i</span>
+              <span className="text-green-400"> {quat.y >= 0 ? '+' : '−'} {Math.abs(quat.y).toFixed(3)}j</span>
+              <span className="text-blue-400"> {quat.z >= 0 ? '+' : '−'} {Math.abs(quat.z).toFixed(3)}k</span>
+            </code>
+            <div className="text-[10px] text-slate-600 mt-2">
+              |q| = {Math.sqrt(quat.w**2 + quat.x**2 + quat.y**2 + quat.z**2).toFixed(4)} (unit quaternion for rotation)
+            </div>
+          </div>
+
+          {/* Controls */}
+          <div className="flex flex-wrap justify-center gap-6 p-5 bg-slate-800/40 rounded-xl border border-slate-700 mb-5">
+            
+            {/* Angle Slider */}
+            <div className="flex flex-col items-center">
+              <label className="text-sm text-slate-400 mb-2">Rotation Angle: {angle.toFixed(0)}°</label>
+              <input
+                type="range"
+                min="0"
+                max="360"
+                value={angle}
+                onChange={(e) => setAngle(Number(e.target.value))}
+                className="w-48 accent-yellow-400"
+              />
+            </div>
+
+            {/* Axis Sliders */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-red-400 font-mono w-4">i:</span>
+                <input
+                  type="range"
+                  min="-1"
+                  max="1"
+                  step="0.1"
+                  value={axis.i}
+                  onChange={(e) => setAxis(a => ({ ...a, i: Number(e.target.value) }))}
+                  className="w-24 accent-red-400"
+                />
+                <span className="text-xs text-slate-500 w-8">{axis.i.toFixed(1)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-green-400 font-mono w-4">j:</span>
+                <input
+                  type="range"
+                  min="-1"
+                  max="1"
+                  step="0.1"
+                  value={axis.j}
+                  onChange={(e) => setAxis(a => ({ ...a, j: Number(e.target.value) }))}
+                  className="w-24 accent-green-400"
+                />
+                <span className="text-xs text-slate-500 w-8">{axis.j.toFixed(1)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-blue-400 font-mono w-4">k:</span>
+                <input
+                  type="range"
+                  min="-1"
+                  max="1"
+                  step="0.1"
+                  value={axis.k}
+                  onChange={(e) => setAxis(a => ({ ...a, k: Number(e.target.value) }))}
+                  className="w-24 accent-blue-400"
+                />
+                <span className="text-xs text-slate-500 w-8">{axis.k.toFixed(1)}</span>
+              </div>
+            </div>
+
+            {/* Preset Axes */}
+            <div className="flex flex-col gap-2">
+              <div className="text-xs text-slate-500 mb-1">Preset Axes:</div>
+              <div className="flex gap-2">
+                <button onClick={() => setAxisPreset(1, 0, 0)} className="px-3 py-1 bg-red-600/30 hover:bg-red-600/50 border border-red-500/50 rounded text-xs">i axis</button>
+                <button onClick={() => setAxisPreset(0, 1, 0)} className="px-3 py-1 bg-green-600/30 hover:bg-green-600/50 border border-green-500/50 rounded text-xs">j axis</button>
+                <button onClick={() => setAxisPreset(0, 0, 1)} className="px-3 py-1 bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/50 rounded text-xs">k axis</button>
+              </div>
+              <button onClick={() => setAxisPreset(1, 1, 1)} className="px-3 py-1 bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/50 rounded text-xs">diagonal (1,1,1)</button>
+            </div>
+          </div>
+
+          {/* Toggle Buttons */}
+          <div className="flex gap-3 mb-5">
+            <button
+              onClick={() => setAutoRotate(!autoRotate)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                autoRotate ? 'bg-yellow-600 hover:bg-yellow-500' : 'bg-slate-700 hover:bg-slate-600'
+              }`}
+            >
+              {autoRotate ? '⏸ Pause' : '▶ Auto-Rotate'}
+            </button>
+            <button
+              onClick={() => setShowAxes(!showAxes)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                showAxes ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-slate-700 hover:bg-slate-600'
+              }`}
+            >
+              {showAxes ? '◉ Axes' : '○ Axes'}
+            </button>
+            <button
+              onClick={() => { setAngle(0); setAxis({ i: 1, j: 0, k: 0 }); }}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 hover:bg-slate-600 transition-all"
+            >
+              ↺ Reset
+            </button>
+          </div>
+
+          {/* Explanation */}
+          <div className="max-w-lg text-sm text-slate-400 leading-relaxed space-y-3">
+            <p>
+              <span className="text-yellow-400">Hamilton's insight:</span> A rotation by angle θ around axis (i, j, k) is encoded as:
+            </p>
+            <code className="block text-center text-slate-300 py-2">
+              q = cos(θ/2) + sin(θ/2)·(i<span className="text-red-400">i</span> + j<span className="text-green-400">j</span> + k<span className="text-blue-400">k</span>)
+            </code>
+            <p className="text-xs text-slate-500 italic">
+              The half-angle appears because quaternion multiplication applies the rotation twice (q·p·q⁻¹), 
+              and because quaternions naturally double-cover SO(3) — both q and −q represent the same rotation.
+            </p>
+          </div>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<QuaternionRotationViz />);
+  </script>
+</body>
+</html>
