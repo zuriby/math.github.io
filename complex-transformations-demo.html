@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complex Function Gallery</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-active { border-bottom: 3px solid #3b82f6; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useMemo, useCallback, useEffect, useRef } = React;
+
+    // ============== COMPLEX NUMBER OPERATIONS ==============
+    const C = {
+      create: (re, im) => ({ re, im }),
+      add: (a, b) => ({ re: a.re + b.re, im: a.im + b.im }),
+      sub: (a, b) => ({ re: a.re - b.re, im: a.im - b.im }),
+      mul: (a, b) => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re }),
+      div: (a, b) => {
+        const denom = b.re * b.re + b.im * b.im;
+        if (denom < 1e-12) return { re: Infinity, im: Infinity };
+        return { re: (a.re * b.re + a.im * b.im) / denom, im: (a.im * b.re - a.re * b.im) / denom };
+      },
+      abs: (z) => Math.sqrt(z.re * z.re + z.im * z.im),
+      abs2: (z) => z.re * z.re + z.im * z.im,
+      arg: (z) => Math.atan2(z.im, z.re),
+      exp: (z) => {
+        const r = Math.exp(z.re);
+        return { re: r * Math.cos(z.im), im: r * Math.sin(z.im) };
+      },
+      log: (z) => ({ re: Math.log(C.abs(z)), im: C.arg(z) }),
+      sin: (z) => ({ re: Math.sin(z.re) * Math.cosh(z.im), im: Math.cos(z.re) * Math.sinh(z.im) }),
+      cos: (z) => ({ re: Math.cos(z.re) * Math.cosh(z.im), im: -Math.sin(z.re) * Math.sinh(z.im) }),
+      tan: (z) => C.div(C.sin(z), C.cos(z)),
+      sinh: (z) => ({ re: Math.sinh(z.re) * Math.cos(z.im), im: Math.cosh(z.re) * Math.sin(z.im) }),
+      cosh: (z) => ({ re: Math.cosh(z.re) * Math.cos(z.im), im: Math.sinh(z.re) * Math.sin(z.im) }),
+      pow: (z, n) => {
+        if (C.abs(z) < 1e-12) return { re: 0, im: 0 };
+        const r = Math.pow(C.abs(z), n);
+        const theta = n * C.arg(z);
+        return { re: r * Math.cos(theta), im: r * Math.sin(theta) };
+      },
+      cpow: (z, w) => {
+        if (C.abs(z) < 1e-12) return { re: 0, im: 0 };
+        return C.exp(C.mul(w, C.log(z)));
+      },
+      sqrt: (z) => C.pow(z, 0.5),
+      conj: (z) => ({ re: z.re, im: -z.im }),
+      scale: (z, s) => ({ re: z.re * s, im: z.im * s }),
+      lerp: (a, b, t) => ({ re: a.re + (b.re - a.re) * t, im: a.im + (b.im - a.im) * t }),
+      gamma: (z) => {
+        // Lanczos approximation for complex gamma
+        const g = 7;
+        const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+          771.32342877765313, -176.61502916214059, 12.507343278686905,
+          -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+        
+        if (z.re < 0.5) {
+          // Reflection formula
+          const reflected = C.gamma({ re: 1 - z.re, im: -z.im });
+          const sinPiZ = C.sin(C.scale(z, Math.PI));
+          return C.div({ re: Math.PI, im: 0 }, C.mul(sinPiZ, reflected));
+        }
+        
+        z = { re: z.re - 1, im: z.im };
+        let x = { re: c[0], im: 0 };
+        for (let i = 1; i < g + 2; i++) {
+          const denom = C.add(z, { re: i, im: 0 });
+          x = C.add(x, C.div({ re: c[i], im: 0 }, denom));
+        }
+        
+        const t = C.add(z, { re: g + 0.5, im: 0 });
+        const sqrt2pi = Math.sqrt(2 * Math.PI);
+        
+        return C.mul(
+          C.mul({ re: sqrt2pi, im: 0 }, C.cpow(t, C.add(z, { re: 0.5, im: 0 }))),
+          C.mul(C.exp(C.scale(t, -1)), x)
+        );
+      },
+      zeta: (s, terms = 50) => {
+        // Dirichlet series with acceleration for Re(s) > 0
+        // Using Euler-Maclaurin or simple partial sums
+        if (s.re < 0.5) {
+          // Functional equation: ζ(s) = 2^s π^(s-1) sin(πs/2) Γ(1-s) ζ(1-s)
+          const oneMinusS = { re: 1 - s.re, im: -s.im };
+          const zetaReflected = C.zeta(oneMinusS, terms);
+          const twoToS = C.cpow({ re: 2, im: 0 }, s);
+          const piToSm1 = C.cpow({ re: Math.PI, im: 0 }, { re: s.re - 1, im: s.im });
+          const sinPiS2 = C.sin(C.scale(s, Math.PI / 2));
+          const gammaOneMinusS = C.gamma(oneMinusS);
+          
+          return C.mul(C.mul(C.mul(twoToS, piToSm1), sinPiS2), C.mul(gammaOneMinusS, zetaReflected));
+        }
+        
+        // Borwein's algorithm for faster convergence
+        let sum = { re: 0, im: 0 };
+        const n = terms;
+        
+        // Compute d_k coefficients
+        const d = new Array(n + 1).fill(0);
+        d[0] = 1;
+        for (let k = 1; k <= n; k++) {
+          d[k] = d[k-1] + Math.pow(4, k) * factorial(n + k - 1) / (factorial(n - k) * factorial(2 * k));
+        }
+        const dn = d[n];
+        
+        for (let k = 0; k < n; k++) {
+          const sign = (k % 2 === 0) ? 1 : -1;
+          const coef = sign * (d[k] - dn) / dn;
+          const term = C.cpow({ re: k + 1, im: 0 }, C.scale(s, -1));
+          sum = C.add(sum, C.scale(term, coef));
+        }
+        
+        const denom = C.sub({ re: 1, im: 0 }, C.cpow({ re: 2, im: 0 }, C.sub({ re: 1, im: 0 }, s)));
+        return C.div(C.scale(sum, -1), denom);
+      }
+    };
+    
+    // Memoized factorial
+    const factorialCache = [1, 1];
+    function factorial(n) {
+      if (n < 0) return 1;
+      if (n < factorialCache.length) return factorialCache[n];
+      let result = factorialCache[factorialCache.length - 1];
+      for (let i = factorialCache.length; i <= n; i++) {
+        result *= i;
+        factorialCache.push(result);
+      }
+      return result;
+    }
+
+    // ============== FUNCTION DEFINITIONS ==============
+    const functionCategories = {
+      'Basic': {
+        'z': { fn: z => z, label: 'f(z) = z' },
+        'z²': { fn: z => C.mul(z, z), label: 'f(z) = z²' },
+        'z³': { fn: z => C.pow(z, 3), label: 'f(z) = z³' },
+        'z⁴': { fn: z => C.pow(z, 4), label: 'f(z) = z⁴' },
+        '1/z': { fn: z => C.div({ re: 1, im: 0 }, z), label: 'f(z) = 1/z' },
+        '√z': { fn: z => C.sqrt(z), label: 'f(z) = √z' },
+      },
+      'Exponential': {
+        'eᶻ': { fn: z => C.exp(z), label: 'f(z) = eᶻ' },
+        'log(z)': { fn: z => C.log(z), label: 'f(z) = log(z)' },
+        'zᶻ': { fn: z => C.cpow(z, z), label: 'f(z) = zᶻ' },
+      },
+      'Trigonometric': {
+        'sin(z)': { fn: z => C.sin(z), label: 'f(z) = sin(z)' },
+        'cos(z)': { fn: z => C.cos(z), label: 'f(z) = cos(z)' },
+        'tan(z)': { fn: z => C.tan(z), label: 'f(z) = tan(z)' },
+        'sinh(z)': { fn: z => C.sinh(z), label: 'f(z) = sinh(z)' },
+        'cosh(z)': { fn: z => C.cosh(z), label: 'f(z) = cosh(z)' },
+      },
+      'Möbius': {
+        '(z-1)/(z+1)': { 
+          fn: z => C.div(C.sub(z, {re:1,im:0}), C.add(z, {re:1,im:0})), 
+          label: '(z-1)/(z+1)' 
+        },
+        '(z-i)/(z+i)': { 
+          fn: z => C.div(C.sub(z, {re:0,im:1}), C.add(z, {re:0,im:1})), 
+          label: '(z-i)/(z+i)' 
+        },
+        '1/(z-1)': { 
+          fn: z => C.div({re:1,im:0}, C.sub(z, {re:1,im:0})), 
+          label: '1/(z-1)' 
+        },
+        'Cayley': { 
+          fn: z => C.div(C.sub(z, {re:0,im:1}), C.sub(z, {re:0,im:-1})), 
+          label: '(z-i)/(z+i) Cayley' 
+        },
+      },
+      'Special': {
+        'Γ(z)': { fn: z => C.gamma(z), label: 'Γ(z) Gamma' },
+        'ζ(z)': { fn: z => C.zeta(z, 30), label: 'ζ(z) Riemann Zeta' },
+        '1/Γ(z)': { fn: z => C.div({re:1,im:0}, C.gamma(z)), label: '1/Γ(z)' },
+      },
+      'Artistic': {
+        'sin(1/z)': { fn: z => C.sin(C.div({re:1,im:0}, z)), label: 'sin(1/z)' },
+        'e^(1/z)': { fn: z => C.exp(C.div({re:1,im:0}, z)), label: 'e^(1/z)' },
+        'z+1/z': { fn: z => C.add(z, C.div({re:1,im:0}, z)), label: 'z + 1/z Joukowski' },
+        'tan(z²)': { fn: z => C.tan(C.mul(z, z)), label: 'tan(z²)' },
+      }
+    };
+
+    // ============== JULIA SET COMPUTATION ==============
+    const juliaIterate = (z, c, maxIter) => {
+      let zn = z;
+      for (let i = 0; i < maxIter; i++) {
+        zn = C.add(C.mul(zn, zn), c);
+        if (C.abs2(zn) > 4) return i;
+      }
+      return maxIter;
+    };
+
+    const juliaPresets = {
+      'Classic': { re: -0.7, im: 0.27015 },
+      'Dragon': { re: -0.8, im: 0.156 },
+      'Dendrite': { re: 0, im: 1 },
+      'Spiral': { re: -0.4, im: 0.6 },
+      'Rabbit': { re: -0.123, im: 0.745 },
+      'San Marco': { re: -0.75, im: 0 },
+      'Siegel Disk': { re: -0.391, im: -0.587 },
+      'Swirl': { re: 0.285, im: 0.01 },
+    };
+
+    // ============== DOMAIN COLORING ==============
+    const hslToRgb = (h, s, l) => {
+      h = ((h % 360) + 360) % 360;
+      s = Math.max(0, Math.min(1, s));
+      l = Math.max(0, Math.min(1, l));
+      
+      const c = (1 - Math.abs(2 * l - 1)) * s;
+      const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+      const m = l - c / 2;
+      
+      let r, g, b;
+      if (h < 60) { r = c; g = x; b = 0; }
+      else if (h < 120) { r = x; g = c; b = 0; }
+      else if (h < 180) { r = 0; g = c; b = x; }
+      else if (h < 240) { r = 0; g = x; b = c; }
+      else if (h < 300) { r = x; g = 0; b = c; }
+      else { r = c; g = 0; b = x; }
+      
+      return [
+        Math.round((r + m) * 255),
+        Math.round((g + m) * 255),
+        Math.round((b + m) * 255)
+      ];
+    };
+
+    const domainColor = (z, showContours = true) => {
+      if (!isFinite(z.re) || !isFinite(z.im)) return [0, 0, 0];
+      
+      const r = C.abs(z);
+      const theta = C.arg(z);
+      
+      // Hue from argument
+      const hue = (theta * 180 / Math.PI + 360) % 360;
+      
+      // Lightness from magnitude with log scaling
+      let lightness = 0.5;
+      if (showContours) {
+        const logR = Math.log2(r + 0.001);
+        const frac = logR - Math.floor(logR);
+        lightness = 0.4 + 0.2 * Math.sin(frac * Math.PI * 2);
+      }
+      
+      // Saturation
+      const saturation = 0.8;
+      
+      return hslToRgb(hue, saturation, lightness);
+    };
+
+    // ============== CURVE GENERATION ==============
+    const generateCurves = (type, params = {}) => {
+      const curves = [];
+      const steps = 120;
+      
+      switch(type) {
+        case 'grid': {
+          const spacing = params.spacing || 0.5;
+          const range = params.range || 2.5;
+          for (let y = -range; y <= range; y += spacing) {
+            const curve = [];
+            for (let i = 0; i <= steps; i++) {
+              const x = -range * 1.2 + (range * 2.4 * i / steps);
+              curve.push({ re: x, im: y });
+            }
+            curves.push({ points: curve, color: `hsl(${(y/range + 1) * 90}, 70%, 50%)` });
+          }
+          for (let x = -range; x <= range; x += spacing) {
+            const curve = [];
+            for (let i = 0; i <= steps; i++) {
+              const y = -range * 1.2 + (range * 2.4 * i / steps);
+              curve.push({ re: x, im: y });
+            }
+            curves.push({ points: curve, color: `hsl(${(x/range + 1) * 90 + 180}, 70%, 50%)` });
+          }
+          break;
+        }
+        case 'polar': {
+          const maxR = params.maxR || 2.5;
+          for (let r = 0.4; r <= maxR; r += 0.4) {
+            const curve = [];
+            for (let i = 0; i <= steps; i++) {
+              const theta = 2 * Math.PI * i / steps;
+              curve.push({ re: r * Math.cos(theta), im: r * Math.sin(theta) });
+            }
+            curves.push({ points: curve, color: `hsl(${r * 50}, 70%, 50%)` });
+          }
+          for (let theta = 0; theta < 2 * Math.PI; theta += Math.PI / 8) {
+            const curve = [];
+            for (let i = 0; i <= steps / 2; i++) {
+              const r = 0.1 + (maxR * i / (steps / 2));
+              curve.push({ re: r * Math.cos(theta), im: r * Math.sin(theta) });
+            }
+            curves.push({ points: curve, color: `hsl(${theta * 180 / Math.PI}, 70%, 60%)` });
+          }
+          break;
+        }
+        case 'criticalStrip': {
+          // For zeta: lines in the critical strip
+          for (let re = -1; re <= 2; re += 0.25) {
+            const curve = [];
+            for (let i = 0; i <= steps; i++) {
+              const im = -30 + (60 * i / steps);
+              curve.push({ re, im });
+            }
+            curves.push({ points: curve, color: re === 0.5 ? '#ef4444' : `hsl(${(re + 1) * 60}, 70%, 50%)` });
+          }
+          for (let im = -25; im <= 25; im += 5) {
+            const curve = [];
+            for (let i = 0; i <= steps; i++) {
+              const re = -1 + (3 * i / steps);
+              curve.push({ re, im });
+            }
+            curves.push({ points: curve, color: `hsl(${(im + 25) * 3.6}, 70%, 50%)` });
+          }
+          break;
+        }
+        default:
+          break;
+      }
+      return curves;
+    };
+
+    // ============== TRANSFORM WITH INTERPOLATION ==============
+    const transformCurves = (curves, fn, t = 1) => {
+      return curves.map(curve => ({
+        ...curve,
+        points: curve.points.map(z => {
+          const fz = fn(z);
+          if (!isFinite(fz.re) || !isFinite(fz.im)) return null;
+          if (t >= 1) return fz;
+          return C.lerp(z, fz, t);
+        })
+      }));
+    };
+
+    // ============== SVG PATH ==============
+    const pointsToPath = (points, scale, offsetX, offsetY, clipRadius = 15) => {
+      const validPoints = points.filter(p => 
+        p !== null && isFinite(p.re) && isFinite(p.im) && 
+        Math.abs(p.re) < clipRadius && Math.abs(p.im) < clipRadius
+      );
+      if (validPoints.length < 2) return '';
+      
+      let path = '';
+      let penDown = false;
+      
+      for (let i = 0; i < validPoints.length; i++) {
+        const p = validPoints[i];
+        const x = offsetX + p.re * scale;
+        const y = offsetY - p.im * scale;
+        
+        if (i > 0) {
+          const prev = validPoints[i-1];
+          const dist = Math.sqrt((p.re - prev.re)**2 + (p.im - prev.im)**2);
+          if (dist > 1.5) penDown = false;
+        }
+        
+        if (!penDown) {
+          path += `M ${x} ${y} `;
+          penDown = true;
+        } else {
+          path += `L ${x} ${y} `;
+        }
+      }
+      return path;
+    };
+
+    // ============== COMPLEX PLANE COMPONENT ==============
+    const ComplexPlane = ({ curves, width, height, scale, title }) => {
+      const offsetX = width / 2;
+      const offsetY = height / 2;
+      
+      const gridLines = [];
+      for (let i = -10; i <= 10; i++) {
+        const x = offsetX + i * scale;
+        const y = offsetY - i * scale;
+        if (x >= 0 && x <= width) {
+          gridLines.push(<line key={`v${i}`} x1={x} y1={0} x2={x} y2={height} stroke="#e5e7eb" strokeWidth={i === 0 ? 1.5 : 0.5} />);
+        }
+        if (y >= 0 && y <= height) {
+          gridLines.push(<line key={`h${i}`} x1={0} y1={y} x2={width} y2={y} stroke="#e5e7eb" strokeWidth={i === 0 ? 1.5 : 0.5} />);
+        }
+      }
+      
+      return (
+        <div className="flex flex-col items-center">
+          <div className="text-sm font-medium mb-1 text-gray-700">{title}</div>
+          <svg width={width} height={height} className="border border-gray-300 rounded bg-white">
+            {gridLines}
+            <line x1={0} y1={offsetY} x2={width} y2={offsetY} stroke="#9ca3af" strokeWidth={1.5} />
+            <line x1={offsetX} y1={0} x2={offsetX} y2={height} stroke="#9ca3af" strokeWidth={1.5} />
+            <text x={width - 15} y={offsetY - 5} fontSize="11" fill="#6b7280">Re</text>
+            <text x={offsetX + 5} y={12} fontSize="11" fill="#6b7280">Im</text>
+            {curves.map((curve, i) => (
+              <path key={i} d={pointsToPath(curve.points, scale, offsetX, offsetY)}
+                stroke={curve.color} strokeWidth={1.5} fill="none" strokeLinecap="round" />
+            ))}
+          </svg>
+        </div>
+      );
+    };
+
+    // ============== DOMAIN COLORING CANVAS ==============
+    const DomainColorCanvas = ({ fn, width, height, range, showContours }) => {
+      const canvasRef = useRef(null);
+      
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.createImageData(width, height);
+        const data = imageData.data;
+        
+        for (let py = 0; py < height; py++) {
+          for (let px = 0; px < width; px++) {
+            const x = (px / width - 0.5) * 2 * range;
+            const y = -(py / height - 0.5) * 2 * range;
+            const z = { re: x, im: y };
+            const w = fn(z);
+            const [r, g, b] = domainColor(w, showContours);
+            const idx = (py * width + px) * 4;
+            data[idx] = r;
+            data[idx + 1] = g;
+            data[idx + 2] = b;
+            data[idx + 3] = 255;
+          }
+        }
+        ctx.putImageData(imageData, 0, 0);
+      }, [fn, width, height, range, showContours]);
+      
+      return <canvas ref={canvasRef} width={width} height={height} className="border border-gray-300 rounded" />;
+    };
+
+    // ============== JULIA SET CANVAS ==============
+    const JuliaCanvas = ({ c, width, height, range, maxIter }) => {
+      const canvasRef = useRef(null);
+      
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.createImageData(width, height);
+        const data = imageData.data;
+        
+        for (let py = 0; py < height; py++) {
+          for (let px = 0; px < width; px++) {
+            const x = (px / width - 0.5) * 2 * range;
+            const y = -(py / height - 0.5) * 2 * range;
+            const z = { re: x, im: y };
+            const iter = juliaIterate(z, c, maxIter);
+            
+            const idx = (py * width + px) * 4;
+            if (iter === maxIter) {
+              data[idx] = data[idx+1] = data[idx+2] = 0;
+            } else {
+              const hue = (iter / maxIter) * 360;
+              const [r, g, b] = hslToRgb(hue, 0.8, 0.5);
+              data[idx] = r;
+              data[idx + 1] = g;
+              data[idx + 2] = b;
+            }
+            data[idx + 3] = 255;
+          }
+        }
+        ctx.putImageData(imageData, 0, 0);
+      }, [c, width, height, range, maxIter]);
+      
+      return <canvas ref={canvasRef} width={width} height={height} className="border border-gray-300 rounded" />;
+    };
+
+    // ============== MANDELBROT CANVAS ==============
+    const MandelbrotCanvas = ({ width, height, range, maxIter, center, onClickPoint }) => {
+      const canvasRef = useRef(null);
+      
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.createImageData(width, height);
+        const data = imageData.data;
+        
+        for (let py = 0; py < height; py++) {
+          for (let px = 0; px < width; px++) {
+            const x = center.re + (px / width - 0.5) * 2 * range;
+            const y = center.im - (py / height - 0.5) * 2 * range;
+            const c = { re: x, im: y };
+            let z = { re: 0, im: 0 };
+            let iter = 0;
+            
+            while (iter < maxIter && C.abs2(z) <= 4) {
+              z = C.add(C.mul(z, z), c);
+              iter++;
+            }
+            
+            const idx = (py * width + px) * 4;
+            if (iter === maxIter) {
+              data[idx] = data[idx+1] = data[idx+2] = 0;
+            } else {
+              const hue = (iter / maxIter) * 360;
+              const [r, g, b] = hslToRgb(hue, 0.8, 0.5);
+              data[idx] = r;
+              data[idx + 1] = g;
+              data[idx + 2] = b;
+            }
+            data[idx + 3] = 255;
+          }
+        }
+        ctx.putImageData(imageData, 0, 0);
+      }, [width, height, range, maxIter, center]);
+      
+      const handleClick = (e) => {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+        const x = center.re + (px / width - 0.5) * 2 * range;
+        const y = center.im - (py / height - 0.5) * 2 * range;
+        onClickPoint({ re: x, im: y });
+      };
+      
+      return <canvas ref={canvasRef} width={width} height={height} 
+        className="border border-gray-300 rounded cursor-crosshair" onClick={handleClick} />;
+    };
+
+    // ============== MAIN APP ==============
+    function App() {
+      const [activeTab, setActiveTab] = useState('transform');
+      const [selectedCategory, setSelectedCategory] = useState('Basic');
+      const [selectedFn, setSelectedFn] = useState('z²');
+      const [curveType, setCurveType] = useState('grid');
+      const [animating, setAnimating] = useState(false);
+      const [animT, setAnimT] = useState(1);
+      const [scale, setScale] = useState(60);
+      const animRef = useRef(null);
+      
+      // Domain coloring state
+      const [domainRange, setDomainRange] = useState(3);
+      const [showContours, setShowContours] = useState(true);
+      
+      // Julia set state
+      const [juliaPreset, setJuliaPreset] = useState('Classic');
+      const [juliaC, setJuliaC] = useState(juliaPresets['Classic']);
+      const [juliaRange, setJuliaRange] = useState(2);
+      const [juliaMaxIter, setJuliaMaxIter] = useState(100);
+      
+      // Mandelbrot state
+      const [mandelbrotCenter, setMandelbrotCenter] = useState({ re: -0.5, im: 0 });
+      const [mandelbrotRange, setMandelbrotRange] = useState(1.5);
+      
+      // Get current function
+      const currentFn = useMemo(() => {
+        for (const cat of Object.values(functionCategories)) {
+          if (cat[selectedFn]) return cat[selectedFn];
+        }
+        return functionCategories['Basic']['z²'];
+      }, [selectedFn]);
+      
+      // Generate curves
+      const inputCurves = useMemo(() => {
+        if (selectedFn === 'ζ(z)') {
+          return generateCurves('criticalStrip');
+        }
+        return generateCurves(curveType);
+      }, [curveType, selectedFn]);
+      
+      const outputCurves = useMemo(() => {
+        return transformCurves(inputCurves, currentFn.fn, animT);
+      }, [inputCurves, currentFn, animT]);
+      
+      // Animation
+      useEffect(() => {
+        if (animating) {
+          let start = null;
+          const duration = 2000;
+          const animate = (timestamp) => {
+            if (!start) start = timestamp;
+            const progress = (timestamp - start) / duration;
+            if (progress >= 1) {
+              setAnimT(1);
+              setAnimating(false);
+            } else {
+              // Smooth easing
+              const t = 0.5 - 0.5 * Math.cos(progress * Math.PI);
+              setAnimT(t);
+              animRef.current = requestAnimationFrame(animate);
+            }
+          };
+          setAnimT(0);
+          animRef.current = requestAnimationFrame(animate);
+        }
+        return () => {
+          if (animRef.current) cancelAnimationFrame(animRef.current);
+        };
+      }, [animating]);
+      
+      const startAnimation = () => {
+        setAnimating(true);
+      };
+      
+      const planeSize = 380;
+      
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <header className="bg-white shadow-sm">
+            <div className="max-w-6xl mx-auto px-4 py-3">
+              <h1 className="text-2xl font-bold text-gray-800">Complex Function Gallery</h1>
+              <p className="text-sm text-gray-500">Explore transformations, domain coloring, Julia sets & more</p>
+            </div>
+          </header>
+          
+          {/* Tabs */}
+          <div className="bg-white border-b">
+            <div className="max-w-6xl mx-auto px-4 flex gap-6">
+              {[
+                { id: 'transform', label: 'Transformations' },
+                { id: 'domain', label: 'Domain Coloring' },
+                { id: 'julia', label: 'Julia Sets' },
+                { id: 'mandelbrot', label: 'Mandelbrot' },
+              ].map(tab => (
+                <button key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-3 px-1 text-sm font-medium ${activeTab === tab.id ? 'tab-active text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <main className="max-w-6xl mx-auto px-4 py-6">
+            {/* ============ TRANSFORMATION TAB ============ */}
+            {activeTab === 'transform' && (
+              <div className="space-y-4">
+                {/* Function selector */}
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {Object.keys(functionCategories).map(cat => (
+                      <button key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-3 py-1 rounded text-sm ${selectedCategory === cat ? 'bg-gray-800 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(functionCategories[selectedCategory]).map(([key, { label }]) => (
+                      <button key={key}
+                        onClick={() => setSelectedFn(key)}
+                        className={`px-3 py-2 rounded text-sm font-medium ${selectedFn === key ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Controls */}
+                <div className="bg-white p-4 rounded-lg shadow flex flex-wrap gap-4 items-center">
+                  <div className="flex gap-2">
+                    {['grid', 'polar'].map(t => (
+                      <button key={t}
+                        onClick={() => setCurveType(t)}
+                        className={`px-3 py-1 rounded text-sm ${curveType === t ? 'bg-green-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      >
+                        {t === 'grid' ? 'Grid' : 'Polar'}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={startAnimation}
+                    disabled={animating}
+                    className="px-4 py-2 bg-purple-600 text-white rounded font-medium hover:bg-purple-700 disabled:opacity-50"
+                  >
+                    {animating ? 'Morphing...' : '▶ Animate Morph'}
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Zoom:</span>
+                    <input type="range" min="30" max="100" value={scale} 
+                      onChange={e => setScale(parseInt(e.target.value))} className="w-24" />
+                  </div>
+                </div>
+                
+                {/* Visualization */}
+                <div className="flex flex-wrap justify-center gap-6 items-center">
+                  <ComplexPlane curves={inputCurves} width={planeSize} height={planeSize} scale={scale} title="Input: z-plane" />
+                  <div className="text-center">
+                    <div className="text-3xl text-gray-400 mb-1">→</div>
+                    <div className="text-lg font-medium">{currentFn.label}</div>
+                    {animating && <div className="text-sm text-purple-600 mt-1">t = {animT.toFixed(2)}</div>}
+                  </div>
+                  <ComplexPlane curves={outputCurves} width={planeSize} height={planeSize} scale={scale} title="Output: w-plane" />
+                </div>
+              </div>
+            )}
+            
+            {/* ============ DOMAIN COLORING TAB ============ */}
+            {activeTab === 'domain' && (
+              <div className="space-y-4">
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {Object.keys(functionCategories).map(cat => (
+                      <button key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-3 py-1 rounded text-sm ${selectedCategory === cat ? 'bg-gray-800 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(functionCategories[selectedCategory]).map(([key, { label }]) => (
+                      <button key={key}
+                        onClick={() => setSelectedFn(key)}
+                        className={`px-3 py-2 rounded text-sm font-medium ${selectedFn === key ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="bg-white p-4 rounded-lg shadow flex flex-wrap gap-4 items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">Range:</span>
+                    <input type="range" min="1" max="10" step="0.5" value={domainRange}
+                      onChange={e => setDomainRange(parseFloat(e.target.value))} className="w-24" />
+                    <span className="text-sm text-gray-600">{domainRange}</span>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={showContours} onChange={e => setShowContours(e.target.checked)} />
+                    Show magnitude contours
+                  </label>
+                </div>
+                
+                <div className="flex flex-col items-center">
+                  <div className="text-lg font-medium mb-2">{currentFn.label}</div>
+                  <DomainColorCanvas fn={currentFn.fn} width={500} height={500} range={domainRange} showContours={showContours} />
+                  <p className="mt-3 text-sm text-gray-600 max-w-lg text-center">
+                    Hue = argument (angle), Brightness bands = magnitude contours. Zeros appear as points where all colors meet. Poles show rapid color cycling.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* ============ JULIA SETS TAB ============ */}
+            {activeTab === 'julia' && (
+              <div className="space-y-4">
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <label className="block text-sm font-medium mb-2">Preset Julia Sets</label>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.keys(juliaPresets).map(name => (
+                      <button key={name}
+                        onClick={() => { setJuliaPreset(name); setJuliaC(juliaPresets[name]); }}
+                        className={`px-3 py-2 rounded text-sm ${juliaPreset === name ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="bg-white p-4 rounded-lg shadow flex flex-wrap gap-6 items-center">
+                  <div>
+                    <label className="text-sm">c = {juliaC.re.toFixed(3)} + {juliaC.im.toFixed(3)}i</label>
+                    <div className="flex gap-4 mt-1">
+                      <div>
+                        <span className="text-xs text-gray-500">Re</span>
+                        <input type="range" min="-2" max="2" step="0.01" value={juliaC.re}
+                          onChange={e => setJuliaC({...juliaC, re: parseFloat(e.target.value)})} className="w-32" />
+                      </div>
+                      <div>
+                        <span className="text-xs text-gray-500">Im</span>
+                        <input type="range" min="-2" max="2" step="0.01" value={juliaC.im}
+                          onChange={e => setJuliaC({...juliaC, im: parseFloat(e.target.value)})} className="w-32" />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-sm">Iterations: {juliaMaxIter}</span>
+                    <input type="range" min="20" max="300" value={juliaMaxIter}
+                      onChange={e => setJuliaMaxIter(parseInt(e.target.value))} className="w-24 ml-2" />
+                  </div>
+                  <div>
+                    <span className="text-sm">Zoom: {juliaRange.toFixed(1)}</span>
+                    <input type="range" min="0.5" max="3" step="0.1" value={juliaRange}
+                      onChange={e => setJuliaRange(parseFloat(e.target.value))} className="w-24 ml-2" />
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-center">
+                  <JuliaCanvas c={juliaC} width={500} height={500} range={juliaRange} maxIter={juliaMaxIter} />
+                  <p className="mt-3 text-sm text-gray-600">
+                    Julia set for z → z² + c. Black = bounded orbits. Colors = escape speed.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* ============ MANDELBROT TAB ============ */}
+            {activeTab === 'mandelbrot' && (
+              <div className="space-y-4">
+                <div className="bg-white p-4 rounded-lg shadow flex flex-wrap gap-6 items-center">
+                  <div>
+                    <span className="text-sm">Zoom: {mandelbrotRange.toFixed(3)}</span>
+                    <input type="range" min="0.001" max="2" step="0.01" value={mandelbrotRange}
+                      onChange={e => setMandelbrotRange(parseFloat(e.target.value))} className="w-32 ml-2" />
+                  </div>
+                  <button onClick={() => { setMandelbrotCenter({re:-0.5,im:0}); setMandelbrotRange(1.5); }}
+                    className="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">
+                    Reset View
+                  </button>
+                  <span className="text-sm text-gray-600">Click to pick Julia c value</span>
+                </div>
+                
+                <div className="flex flex-wrap justify-center gap-6">
+                  <div className="flex flex-col items-center">
+                    <div className="text-sm font-medium mb-1">Mandelbrot Set</div>
+                    <MandelbrotCanvas width={400} height={400} 
+                      range={mandelbrotRange} maxIter={150} center={mandelbrotCenter}
+                      onClickPoint={(c) => { setJuliaC(c); setActiveTab('julia'); }} />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Center: {mandelbrotCenter.re.toFixed(3)} + {mandelbrotCenter.im.toFixed(3)}i
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="text-sm font-medium mb-1">Julia for c = {juliaC.re.toFixed(3)} + {juliaC.im.toFixed(3)}i</div>
+                    <JuliaCanvas c={juliaC} width={400} height={400} range={2} maxIter={100} />
+                  </div>
+                </div>
+                
+                <p className="text-center text-sm text-gray-600 max-w-2xl mx-auto">
+                  The Mandelbrot set is the "map" of all Julia sets. Click any point c in the Mandelbrot to see its corresponding Julia set. Points inside the Mandelbrot produce connected Julia sets; points outside produce "dust."
+                </p>
+              </div>
+            )}
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
