@@ -1,0 +1,1980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complex Analysis: The Complete Picture</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-active { border-bottom: 3px solid #3b82f6; }
+    canvas { display: block; }
+    .help-modal { 
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .help-modal.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .help-modal.hidden[dir="ltr"], .help-modal.hidden:not([dir]) {
+      transform: translateX(100%);
+    }
+    .help-modal.hidden[dir="rtl"] {
+      transform: translateX(-100%);
+    }
+    .help-section h3 { margin-top: 1.5rem; }
+    .help-section h3:first-child { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useMemo, useCallback, useEffect, useRef, createContext, useContext } = React;
+
+    // ============== INTERNATIONALIZATION SYSTEM ==============
+    const locales = {
+      'en-US': {
+        meta: {
+          name: 'English',
+          nativeName: 'English',
+          direction: 'ltr'
+        },
+        app: {
+          title: 'Complex Analysis: The Complete Picture',
+          subtitle: 'Riemann Surfaces, The Sphere at Infinity, and Conformality',
+          footer: 'Drag 3D views to rotate. The mathematics is real — no approximations except numerical precision.',
+          helpButton: 'Guide',
+          closeButton: 'Close'
+        },
+        tabs: {
+          surface: '🌀 Riemann Surfaces',
+          sphere: '🌍 Riemann Sphere',
+          tissot: '⭕ Tissot Indicatrix',
+          morph: '🎬 Animate Morph',
+          flow: '🌊 Vector Flow'
+        },
+        guide: {
+          title: "The Visual Complex Analysis Laboratory",
+          subtitle: "A User's Guide to the Invisible Universe",
+          intro: "Welcome. You are about to explore the beautiful machinery behind the mathematics of heat, light, fluid dynamics, and quantum mechanics. This tool allows you to see complex numbers not as static equations, but as living geometric transformations.",
+          sections: [
+            {
+              id: 'surface',
+              icon: '🌀',
+              title: 'Riemann Surfaces',
+              tagline: 'The Hidden Structure',
+              concept: {
+                question: "Why do functions like √z seem to \"break\" math?",
+                explanation: "In standard algebra, a function should only have one answer. But √4 is both 2 and -2. In 2D graphing, this forces a \"tear\" or a jump. In reality, the function is continuous — it just lives on a spiraling surface."
+              },
+              activities: [
+                "Select <strong>√z</strong>. Rotate the 3D model. Notice it looks like a parking garage ramp. One full circle around the center (360°) only takes you halfway up the ramp. You must rotate twice (720°) to get back to where you started.",
+                "Select <strong>log(z)</strong>. This is the infinite spiral. It shows why the logarithm has infinite answers."
+              ],
+              insight: "Complex functions don't break; they just need more room to breathe than a flat sheet of paper allows."
+            },
+            {
+              id: 'sphere',
+              icon: '🌍',
+              title: 'Riemann Sphere',
+              tagline: 'Infinity is a Place',
+              concept: {
+                question: "What happens when you divide by zero?",
+                explanation: "In real calculus, 1/0 is an error. In Complex Analysis, it is simply a location: the North Pole. This view wraps the infinite flat plane onto a sphere."
+              },
+              activities: [
+                "Select <strong>1/z</strong>. Watch how the grid lines flow smoothly from the South Pole (0) to the North Pole (∞). It is just a rotation of the sphere.",
+                "<strong>Möbius Transformations:</strong> Observe that lines on the flat plane become circles on the sphere."
+              ],
+              insight: "Infinity is not a crash; it is just the other side of the world."
+            },
+            {
+              id: 'tissot',
+              icon: '⭕',
+              title: "Tissot's Indicatrix",
+              tagline: 'The "Analytic" Test',
+              concept: {
+                question: "How do we know if a function is mathematically \"pure\"?",
+                explanation: "Complex differentiation imposes a strict rule called Conformality: A function may rotate and scale space, but it must never squash it. We test this by drawing perfect circles."
+              },
+              activities: [
+                "Select <strong>z²</strong> or <strong>eᶻ</strong>. The circles change size and position, but they remain perfectly round. This proves the function is Analytic (differentiable).",
+                "Select <strong>Conjugate (z̄)</strong>. Watch the circles get squashed into ellipses. This function violates the laws of complex calculus."
+              ],
+              insight: "Analytic functions are \"rigid\" yet flexible. They preserve the local shape of the universe."
+            },
+            {
+              id: 'morph',
+              icon: '🎬',
+              title: 'Animate Morph',
+              tagline: 'The Deformation',
+              concept: {
+                question: "How does input turn into output?",
+                explanation: "This view visualizes the transformation as a continuous movie. It treats the complex plane as an elastic sheet being stretched and twisted."
+              },
+              activities: [
+                "Select <strong>eᶻ</strong>. Watch the transition. Horizontal lines become rays; vertical lines become circles. You are watching Cartesian coordinates (x,y) morph into Polar coordinates (r, θ).",
+                "Select <strong>z²</strong>. Watch the space fold over onto itself. This is the \"double cover\" you saw in the Riemann Surface tab, viewed from above."
+              ],
+              insight: "Every complex function is a way of reshaping the universe. The animation reveals the choreography."
+            },
+            {
+              id: 'flow',
+              icon: '🌊',
+              title: 'Vector Flow & The Cauchy Lasso',
+              tagline: 'The Grand Finale',
+              concept: {
+                question: "How does Math become Physics?",
+                explanation: "Here, complex numbers are velocities. We also introduce Contour Integration — the art of \"counting holes\" using calculus."
+              },
+              subsections: [
+                {
+                  title: "Part A: The Physics (Pólya Field)",
+                  activities: [
+                    "Toggle <strong>f̄(z) (Physical Flow)</strong> ON and enable <strong>Trails</strong>.",
+                    "Select <strong>1/z</strong>: You see a \"Source\" — like water from a pipe or a positive electric charge.",
+                    "Select <strong>1/z²</strong>: You see a \"Dipole\" — identical to Earth's magnetic field.",
+                    "Select <strong>z + 1/z</strong>: This is the <strong>Joukowski Airfoil</strong>. You are seeing the airflow that allows planes to fly."
+                  ],
+                  note: "With conjugate OFF, you see the raw mathematical vector field. With conjugate ON, you see the physical flow — what water or electricity actually does."
+                },
+                {
+                  title: "Part B: The Calculus (The Lasso)",
+                  activities: [
+                    "Enable <strong>Show Lasso</strong>. Drag the center to move it; drag the edge to resize.",
+                    "<strong>Experiment 1 (The Source):</strong> Select <strong>1/z</strong>. Drag the lasso into empty space — Integral is <strong>0</strong>. Now drag it over the red center dot. <em>SNAP.</em> The integral becomes <strong>2πi ≈ 6.28i</strong>. The size and shape of the loop don't matter; only whether it captures the singularity.",
+                    "<strong>Experiment 2 (The Dipole):</strong> Select <strong>1/z²</strong>. Drag the lasso over the center — Integral is still <strong>0</strong>. Why? Because the \"push\" and \"pull\" of a dipole cancel perfectly. The residue of a double pole is zero.",
+                    "<strong>Experiment 3 (The Pair):</strong> Select <strong>1/(z²+1)</strong>. There are two holes at ±i. Catch one, you get <strong>πi</strong>. Catch both, they cancel to <strong>0</strong>."
+                  ]
+                }
+              ],
+              insight: "Integration in the complex plane is Topological. It isn't about measuring length or area; it is about counting how many singularities you have captured."
+            }
+          ],
+          finalNote: {
+            title: "The Deep Unity",
+            content: "What you have explored is not five separate tools — it is five windows into the same mathematical reality. The Riemann Surface explains why functions are multi-valued. The Riemann Sphere shows where infinity lives. Tissot's Indicatrix proves conformality. The animation reveals the transformation. And the Cauchy Lasso demonstrates that calculus, in the complex realm, is secretly topology. This is the mathematics that physicists use to describe electromagnetism, fluid flow, quantum mechanics, and the fabric of spacetime itself."
+          }
+        }
+      },
+      'he-IL': {
+        meta: {
+          name: 'Hebrew',
+          nativeName: 'עברית',
+          direction: 'rtl'
+        },
+        app: {
+          title: 'אנליזה מרוכבת: התמונה המלאה',
+          subtitle: 'משטחי רימן, הכדור באינסוף, וקונפורמיות',
+          footer: 'גרור תצוגות תלת-ממד לסיבוב. המתמטיקה אמיתית — ללא קירובים מלבד דיוק נומרי.',
+          helpButton: 'מדריך',
+          closeButton: 'סגור'
+        },
+        tabs: {
+          surface: '🌀 משטחי רימן',
+          sphere: '🌍 כדור רימן',
+          tissot: '⭕ אינדיקטריקס טיסו',
+          morph: '🎬 אנימציית מורפינג',
+          flow: '🌊 שדה וקטורי'
+        },
+        guide: {
+          title: 'מעבדת האנליזה המרוכבת הוויזואלית',
+          subtitle: 'מדריך למשתמש ביקום הבלתי נראה',
+          intro: 'ברוכים הבאים. אתם עומדים לחקור את המכניזם היפה שמאחורי המתמטיקה של חום, אור, דינמיקת זורמים, ומכניקת הקוונטים.',
+          sections: [],
+          finalNote: {
+            title: 'האחדות העמוקה',
+            content: 'מה שחקרתם אינו חמישה כלים נפרדים — אלא חמישה חלונות אל אותה מציאות מתמטית.'
+          }
+        }
+      }
+    };
+    
+    // Locale context
+    const LocaleContext = createContext('en-US');
+    
+    const useLocale = () => {
+      const locale = useContext(LocaleContext);
+      return locales[locale] || locales['en-US'];
+    };
+
+    // ============== HELP MODAL COMPONENT ==============
+    const HelpModal = ({ isOpen, onClose }) => {
+      const locale = useContext(LocaleContext);
+      const currentLocale = locales[locale] || locales['en-US'];
+      const fallback = locales['en-US'];
+      
+      // Use current locale's guide, but fall back to English for missing content
+      const guide = {
+        ...fallback.guide,
+        ...currentLocale.guide,
+        sections: currentLocale.guide.sections?.length > 0 
+          ? currentLocale.guide.sections 
+          : fallback.guide.sections,
+        finalNote: currentLocale.guide.finalNote?.content 
+          ? currentLocale.guide.finalNote 
+          : fallback.guide.finalNote
+      };
+      
+      const t = currentLocale;
+      const isRTL = t.meta.direction === 'rtl';
+      
+      return (
+        <div 
+          className={`help-modal fixed inset-y-0 ${isRTL ? 'left-0' : 'right-0'} w-full max-w-2xl bg-white shadow-2xl z-50 overflow-hidden flex flex-col ${isOpen ? '' : 'hidden'}`}
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
+          {/* Header */}
+          <div className="bg-gradient-to-r from-indigo-900 to-purple-900 text-white p-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-2xl font-bold">🌌 {guide.title}</h1>
+                <p className="text-indigo-200 mt-1">{guide.subtitle}</p>
+              </div>
+              <button 
+                onClick={onClose}
+                className="text-white hover:text-indigo-200 text-2xl leading-none p-2"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6 help-section">
+            <p className="text-gray-700 mb-6 leading-relaxed">{guide.intro}</p>
+            
+            {guide.sections.map((section, idx) => (
+              <div key={section.id} className="mb-8">
+                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <span className="text-2xl">{section.icon}</span>
+                  {idx + 1}. {section.title}
+                  <span className="text-sm font-normal text-gray-500 ml-2">({section.tagline})</span>
+                </h3>
+                
+                {/* Concept */}
+                <div className="mt-3 bg-gray-50 p-4 rounded-lg">
+                  <p className="font-medium text-gray-700">The Concept: <em>{section.concept.question}</em></p>
+                  <p className="text-gray-600 mt-2">{section.concept.explanation}</p>
+                </div>
+                
+                {/* Activities */}
+                {section.activities && (
+                  <div className="mt-4">
+                    <p className="font-medium text-gray-700 mb-2">What to do:</p>
+                    <ul className="space-y-2">
+                      {section.activities.map((activity, i) => (
+                        <li key={i} className="flex gap-2 text-gray-600">
+                          <span className="text-indigo-500">▸</span>
+                          <span dangerouslySetInnerHTML={{ __html: activity }} />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {/* Subsections (for Vector Flow) */}
+                {section.subsections && section.subsections.map((sub, si) => (
+                  <div key={si} className="mt-4">
+                    <p className="font-semibold text-gray-700">{sub.title}</p>
+                    <ul className="mt-2 space-y-2">
+                      {sub.activities.map((activity, i) => (
+                        <li key={i} className="flex gap-2 text-gray-600">
+                          <span className="text-indigo-500">▸</span>
+                          <span dangerouslySetInnerHTML={{ __html: activity }} />
+                        </li>
+                      ))}
+                    </ul>
+                    {sub.note && (
+                      <p className="mt-2 text-sm text-gray-500 italic bg-blue-50 p-2 rounded">{sub.note}</p>
+                    )}
+                  </div>
+                ))}
+                
+                {/* Insight */}
+                <div className="mt-4 border-l-4 border-indigo-500 pl-4">
+                  <p className="text-gray-700"><strong>The Insight:</strong> {section.insight}</p>
+                </div>
+              </div>
+            ))}
+            
+            {/* Final Note */}
+            <div className="mt-8 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-lg">
+              <h3 className="text-lg font-bold text-indigo-900">{guide.finalNote.title}</h3>
+              <p className="mt-2 text-gray-700 leading-relaxed">{guide.finalNote.content}</p>
+            </div>
+          </div>
+        </div>
+      );
+    };
+    
+    // Overlay for modal
+    const ModalOverlay = ({ isOpen, onClick }) => (
+      <div 
+        className={`fixed inset-0 bg-black transition-opacity z-40 ${isOpen ? 'opacity-50' : 'opacity-0 pointer-events-none'}`}
+        onClick={onClick}
+      />
+    );
+
+    // ============== COMPLEX NUMBER OPERATIONS ==============
+    const C = {
+      create: (re, im) => ({ re, im }),
+      add: (a, b) => ({ re: a.re + b.re, im: a.im + b.im }),
+      sub: (a, b) => ({ re: a.re - b.re, im: a.im - b.im }),
+      mul: (a, b) => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re }),
+      div: (a, b) => {
+        const denom = b.re * b.re + b.im * b.im;
+        if (denom < 1e-12) return { re: Infinity, im: Infinity };
+        return { re: (a.re * b.re + a.im * b.im) / denom, im: (a.im * b.re - a.re * b.im) / denom };
+      },
+      abs: (z) => Math.sqrt(z.re * z.re + z.im * z.im),
+      abs2: (z) => z.re * z.re + z.im * z.im,
+      arg: (z) => Math.atan2(z.im, z.re),
+      exp: (z) => {
+        const r = Math.exp(z.re);
+        return { re: r * Math.cos(z.im), im: r * Math.sin(z.im) };
+      },
+      log: (z, branch = 0) => ({ re: Math.log(C.abs(z)), im: C.arg(z) + 2 * Math.PI * branch }),
+      sin: (z) => ({ re: Math.sin(z.re) * Math.cosh(z.im), im: Math.cos(z.re) * Math.sinh(z.im) }),
+      cos: (z) => ({ re: Math.cos(z.re) * Math.cosh(z.im), im: -Math.sin(z.re) * Math.sinh(z.im) }),
+      tan: (z) => C.div(C.sin(z), C.cos(z)),
+      sinh: (z) => ({ re: Math.sinh(z.re) * Math.cos(z.im), im: Math.cosh(z.re) * Math.sin(z.im) }),
+      cosh: (z) => ({ re: Math.cosh(z.re) * Math.cos(z.im), im: Math.sinh(z.re) * Math.sin(z.im) }),
+      pow: (z, n) => {
+        if (C.abs(z) < 1e-12) return { re: 0, im: 0 };
+        const r = Math.pow(C.abs(z), n);
+        const theta = n * C.arg(z);
+        return { re: r * Math.cos(theta), im: r * Math.sin(theta) };
+      },
+      sqrt: (z, branch = 0) => {
+        const r = Math.sqrt(C.abs(z));
+        const theta = (C.arg(z) + 2 * Math.PI * branch) / 2;
+        return { re: r * Math.cos(theta), im: r * Math.sin(theta) };
+      },
+      conj: (z) => ({ re: z.re, im: -z.im }),
+      scale: (z, s) => ({ re: z.re * s, im: z.im * s }),
+      lerp: (a, b, t) => ({ re: a.re + (b.re - a.re) * t, im: a.im + (b.im - a.im) * t }),
+    };
+
+    // ============== HSL TO RGB ==============
+    const hslToRgb = (h, s, l) => {
+      h = ((h % 360) + 360) % 360;
+      s = Math.max(0, Math.min(1, s));
+      l = Math.max(0, Math.min(1, l));
+      const c = (1 - Math.abs(2 * l - 1)) * s;
+      const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+      const m = l - c / 2;
+      let r, g, b;
+      if (h < 60) { r = c; g = x; b = 0; }
+      else if (h < 120) { r = x; g = c; b = 0; }
+      else if (h < 180) { r = 0; g = c; b = x; }
+      else if (h < 240) { r = 0; g = x; b = c; }
+      else if (h < 300) { r = x; g = 0; b = c; }
+      else { r = c; g = 0; b = x; }
+      return [(r + m), (g + m), (b + m)];
+    };
+
+    // ============== FUNCTION LIBRARY ==============
+    const functions = {
+      'z': { fn: z => z, label: 'f(z) = z', analytic: true },
+      'z²': { fn: z => C.mul(z, z), label: 'f(z) = z²', analytic: true },
+      'z³': { fn: z => C.pow(z, 3), label: 'f(z) = z³', analytic: true },
+      'eᶻ': { fn: z => C.exp(z), label: 'f(z) = eᶻ', analytic: true },
+      '1/z': { fn: z => C.div({ re: 1, im: 0 }, z), label: 'f(z) = 1/z', analytic: true },
+      'sin(z)': { fn: z => C.sin(z), label: 'f(z) = sin(z)', analytic: true },
+      '√z': { fn: z => C.sqrt(z), label: 'f(z) = √z', analytic: true, multivalued: true },
+      'log(z)': { fn: z => C.log(z), label: 'f(z) = log(z)', analytic: true, multivalued: true },
+      '(z-1)/(z+1)': { 
+        fn: z => C.div(C.sub(z, {re:1,im:0}), C.add(z, {re:1,im:0})), 
+        label: '(z-1)/(z+1)', analytic: true 
+      },
+      'z̄ (conjugate)': { fn: z => C.conj(z), label: 'f(z) = z̄', analytic: false },
+      'Re(z)': { fn: z => ({ re: z.re, im: 0 }), label: 'f(z) = Re(z)', analytic: false },
+      '|z|': { fn: z => ({ re: C.abs(z), im: 0 }), label: 'f(z) = |z|', analytic: false },
+    };
+
+    // ============== STEREOGRAPHIC PROJECTION ==============
+    // Complex plane to Riemann sphere
+    const planeToSphere = (z) => {
+      const r2 = z.re * z.re + z.im * z.im;
+      if (r2 > 1e10) return { x: 0, y: 0, z: 1 }; // North pole (infinity)
+      const denom = 1 + r2;
+      return {
+        x: 2 * z.re / denom,
+        y: 2 * z.im / denom,
+        z: (r2 - 1) / denom
+      };
+    };
+
+    // Sphere to complex plane
+    const sphereToPlane = (p) => {
+      if (p.z >= 0.9999) return { re: Infinity, im: Infinity };
+      const denom = 1 - p.z;
+      return { re: p.x / denom, im: p.y / denom };
+    };
+
+    // ============== TISSOT INDICATRIX COMPONENT ==============
+    const TissotCanvas = ({ fn, width, height, range, isAnalytic }) => {
+      const canvasRef = useRef(null);
+      
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, width, height);
+        
+        const toScreen = (z) => ({
+          x: width/2 + z.re * (width / (2 * range)),
+          y: height/2 - z.im * (height / (2 * range))
+        });
+        
+        // Draw grid
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 0.5;
+        for (let i = -10; i <= 10; i++) {
+          const x = width/2 + i * (width / (2 * range));
+          const y = height/2 - i * (height / (2 * range));
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+        }
+        
+        // Draw axes
+        ctx.strokeStyle = '#9ca3af';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(0, height/2); ctx.lineTo(width, height/2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(width/2, 0); ctx.lineTo(width/2, height); ctx.stroke();
+        
+        // Draw Tissot circles
+        const spacing = 0.6;
+        const circleRadius = 0.15;
+        const steps = 32;
+        
+        for (let cx = -range + spacing/2; cx < range; cx += spacing) {
+          for (let cy = -range + spacing/2; cy < range; cy += spacing) {
+            const center = { re: cx, im: cy };
+            
+            // Transform circle points
+            const transformedPoints = [];
+            for (let i = 0; i <= steps; i++) {
+              const theta = 2 * Math.PI * i / steps;
+              const z = { 
+                re: cx + circleRadius * Math.cos(theta), 
+                im: cy + circleRadius * Math.sin(theta) 
+              };
+              const w = fn(z);
+              if (isFinite(w.re) && isFinite(w.im) && C.abs(w) < range * 2) {
+                transformedPoints.push(toScreen(w));
+              }
+            }
+            
+            if (transformedPoints.length > 2) {
+              // Color by original position
+              const hue = (Math.atan2(cy, cx) * 180 / Math.PI + 360) % 360;
+              ctx.strokeStyle = `hsl(${hue}, 70%, 45%)`;
+              ctx.fillStyle = `hsla(${hue}, 70%, 60%, 0.3)`;
+              ctx.lineWidth = 1.5;
+              
+              ctx.beginPath();
+              ctx.moveTo(transformedPoints[0].x, transformedPoints[0].y);
+              for (let i = 1; i < transformedPoints.length; i++) {
+                const prev = transformedPoints[i-1];
+                const curr = transformedPoints[i];
+                const dist = Math.sqrt((curr.x - prev.x)**2 + (curr.y - prev.y)**2);
+                if (dist < 100) {
+                  ctx.lineTo(curr.x, curr.y);
+                } else {
+                  ctx.moveTo(curr.x, curr.y);
+                }
+              }
+              ctx.closePath();
+              ctx.fill();
+              ctx.stroke();
+            }
+          }
+        }
+        
+        // Label
+        ctx.fillStyle = '#374151';
+        ctx.font = '14px system-ui';
+        ctx.fillText(isAnalytic ? 'Analytic: Circles → Circles' : 'Non-analytic: Circles → Ellipses!', 10, 20);
+        
+      }, [fn, width, height, range, isAnalytic]);
+      
+      return <canvas ref={canvasRef} width={width} height={height} className="border border-gray-300 rounded" />;
+    };
+
+    // ============== RIEMANN SPHERE (3D) ==============
+    const RiemannSphereView = ({ fn, width, height }) => {
+      const containerRef = useRef(null);
+      const sceneRef = useRef(null);
+      const rendererRef = useRef(null);
+      const animFrameRef = useRef(null);
+      
+      useEffect(() => {
+        const container = containerRef.current;
+        
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8fafc);
+        
+        const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 100);
+        camera.position.set(2.5, 1.5, 2.5);
+        camera.lookAt(0, 0, 0);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(width, height);
+        container.appendChild(renderer.domElement);
+        rendererRef.current = renderer;
+        
+        // Sphere wireframe
+        const sphereGeo = new THREE.SphereGeometry(1, 32, 32);
+        const sphereWire = new THREE.WireframeGeometry(sphereGeo);
+        const sphereMat = new THREE.LineBasicMaterial({ color: 0xcccccc, transparent: true, opacity: 0.3 });
+        const sphere = new THREE.LineSegments(sphereWire, sphereMat);
+        scene.add(sphere);
+        
+        // Solid sphere for reference
+        const solidSphere = new THREE.Mesh(
+          new THREE.SphereGeometry(0.98, 32, 32),
+          new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1 })
+        );
+        scene.add(solidSphere);
+        
+        // Mark poles
+        const poleGeo = new THREE.SphereGeometry(0.05, 16, 16);
+        const northPole = new THREE.Mesh(poleGeo, new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+        northPole.position.set(0, 0, 1);
+        scene.add(northPole);
+        
+        const southPole = new THREE.Mesh(poleGeo, new THREE.MeshBasicMaterial({ color: 0x3b82f6 }));
+        southPole.position.set(0, 0, -1);
+        scene.add(southPole);
+        
+        // Draw curves on the sphere
+        const drawCurveOnSphere = (points, color) => {
+          const positions = [];
+          for (let i = 0; i < points.length; i++) {
+            const p = planeToSphere(points[i]);
+            positions.push(p.x, p.y, p.z);
+          }
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+          const material = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+          return new THREE.Line(geometry, material);
+        };
+        
+        // Grid of curves
+        const curveGroup = new THREE.Group();
+        const range = 5;
+        const steps = 100;
+        
+        // Horizontal lines (become latitude-like circles)
+        for (let y = -range; y <= range; y += 0.5) {
+          const points = [];
+          for (let i = 0; i <= steps; i++) {
+            const x = -range + (2 * range * i / steps);
+            points.push({ re: x, im: y });
+          }
+          // Transform through function
+          const transformed = points.map(z => {
+            const w = fn(z);
+            return (isFinite(w.re) && isFinite(w.im)) ? w : null;
+          }).filter(w => w !== null);
+          
+          if (transformed.length > 2) {
+            const hue = ((y + range) / (2 * range)) * 240;
+            const [r, g, b] = hslToRgb(hue, 0.7, 0.5);
+            const curve = drawCurveOnSphere(transformed, new THREE.Color(r, g, b));
+            curveGroup.add(curve);
+          }
+        }
+        
+        // Vertical lines
+        for (let x = -range; x <= range; x += 0.5) {
+          const points = [];
+          for (let i = 0; i <= steps; i++) {
+            const y = -range + (2 * range * i / steps);
+            points.push({ re: x, im: y });
+          }
+          const transformed = points.map(z => {
+            const w = fn(z);
+            return (isFinite(w.re) && isFinite(w.im)) ? w : null;
+          }).filter(w => w !== null);
+          
+          if (transformed.length > 2) {
+            const hue = ((x + range) / (2 * range)) * 240 + 120;
+            const [r, g, b] = hslToRgb(hue, 0.7, 0.5);
+            const curve = drawCurveOnSphere(transformed, new THREE.Color(r, g, b));
+            curveGroup.add(curve);
+          }
+        }
+        
+        scene.add(curveGroup);
+        sceneRef.current = scene;
+        
+        // Animation with mouse drag
+        let isDragging = false;
+        let prevMouse = { x: 0, y: 0 };
+        let rotation = { x: 0.3, y: 0 };
+        
+        const onMouseDown = (e) => {
+          isDragging = true;
+          prevMouse = { x: e.clientX, y: e.clientY };
+        };
+        
+        const onMouseUp = () => { isDragging = false; };
+        
+        const onMouseMove = (e) => {
+          if (!isDragging) return;
+          const dx = e.clientX - prevMouse.x;
+          const dy = e.clientY - prevMouse.y;
+          rotation.y += dx * 0.01;
+          rotation.x += dy * 0.01;
+          rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotation.x));
+          prevMouse = { x: e.clientX, y: e.clientY };
+        };
+        
+        container.addEventListener('mousedown', onMouseDown);
+        container.addEventListener('mouseup', onMouseUp);
+        container.addEventListener('mouseleave', onMouseUp);
+        container.addEventListener('mousemove', onMouseMove);
+        
+        const animate = () => {
+          if (!isDragging) {
+            rotation.y += 0.003;
+          }
+          
+          camera.position.x = 3 * Math.sin(rotation.y) * Math.cos(rotation.x);
+          camera.position.y = 3 * Math.sin(rotation.x);
+          camera.position.z = 3 * Math.cos(rotation.y) * Math.cos(rotation.x);
+          camera.lookAt(0, 0, 0);
+          
+          renderer.render(scene, camera);
+          animFrameRef.current = requestAnimationFrame(animate);
+        };
+        animate();
+        
+        return () => {
+          cancelAnimationFrame(animFrameRef.current);
+          container.removeEventListener('mousedown', onMouseDown);
+          container.removeEventListener('mouseup', onMouseUp);
+          container.removeEventListener('mouseleave', onMouseUp);
+          container.removeEventListener('mousemove', onMouseMove);
+          renderer.dispose();
+          container.removeChild(renderer.domElement);
+        };
+      }, [fn, width, height]);
+      
+      return <div ref={containerRef} className="border border-gray-300 rounded cursor-grab" />;
+    };
+
+    // ============== RIEMANN SURFACE (3D) ==============
+    const RiemannSurfaceView = ({ fnType, width, height }) => {
+      const containerRef = useRef(null);
+      const rendererRef = useRef(null);
+      const animFrameRef = useRef(null);
+      
+      useEffect(() => {
+        const container = containerRef.current;
+        
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+        
+        const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 100);
+        camera.position.set(4, 3, 4);
+        camera.lookAt(0, 0, 0);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(width, height);
+        container.appendChild(renderer.domElement);
+        rendererRef.current = renderer;
+        
+        // Build Riemann surface
+        const buildSurface = () => {
+          const group = new THREE.Group();
+          
+          if (fnType === 'sqrt') {
+            // √z: 2 sheets, connected at branch cut
+            const sheets = 2;
+            const rMax = 2;
+            const rSteps = 40;
+            const thetaSteps = 100;
+            
+            for (let sheet = 0; sheet < sheets; sheet++) {
+              const positions = [];
+              const colors = [];
+              const indices = [];
+              
+              for (let ri = 0; ri <= rSteps; ri++) {
+                const r = 0.01 + (rMax * ri / rSteps);
+                for (let ti = 0; ti <= thetaSteps; ti++) {
+                  // Theta goes from 0 to 2π for each sheet, but we offset by sheet
+                  const theta = (ti / thetaSteps) * 2 * Math.PI + sheet * 2 * Math.PI;
+                  
+                  // Input: z = r * e^(i*theta)
+                  // Output: w = √r * e^(i*theta/2)
+                  const sqrtR = Math.sqrt(r);
+                  const halfTheta = theta / 2;
+                  
+                  const wRe = sqrtR * Math.cos(halfTheta);
+                  const wIm = sqrtR * Math.sin(halfTheta);
+                  
+                  // Use theta (mod 4π) as height to show the spiral
+                  const height = (theta / (4 * Math.PI)) * 2 - 1;
+                  
+                  positions.push(wRe, height, wIm);
+                  
+                  // Color by phase
+                  const hue = (halfTheta * 180 / Math.PI + 360) % 360;
+                  const [cr, cg, cb] = hslToRgb(hue, 0.8, 0.5);
+                  colors.push(cr, cg, cb);
+                }
+              }
+              
+              // Build indices for triangles
+              for (let ri = 0; ri < rSteps; ri++) {
+                for (let ti = 0; ti < thetaSteps; ti++) {
+                  const a = ri * (thetaSteps + 1) + ti;
+                  const b = a + 1;
+                  const c = a + thetaSteps + 1;
+                  const d = c + 1;
+                  indices.push(a, b, c);
+                  indices.push(b, d, c);
+                }
+              }
+              
+              const geometry = new THREE.BufferGeometry();
+              geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+              geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+              geometry.setIndex(indices);
+              geometry.computeVertexNormals();
+              
+              const material = new THREE.MeshBasicMaterial({ 
+                vertexColors: true, 
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.85
+              });
+              
+              const mesh = new THREE.Mesh(geometry, material);
+              group.add(mesh);
+              
+              // Add wireframe
+              const wireGeo = new THREE.WireframeGeometry(geometry);
+              const wireMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.1 });
+              const wireframe = new THREE.LineSegments(wireGeo, wireMat);
+              group.add(wireframe);
+            }
+            
+            // Add branch cut indicator (vertical line at origin)
+            const cutGeo = new THREE.BufferGeometry();
+            cutGeo.setAttribute('position', new THREE.Float32BufferAttribute([0, -1, 0, 0, 1, 0], 3));
+            const cutMat = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 3 });
+            const cutLine = new THREE.Line(cutGeo, cutMat);
+            group.add(cutLine);
+            
+          } else if (fnType === 'log') {
+            // log(z): infinite sheets, show 3
+            const sheets = 3;
+            const rMax = 2;
+            const rSteps = 30;
+            const thetaSteps = 80;
+            
+            for (let sheet = -1; sheet <= 1; sheet++) {
+              const positions = [];
+              const colors = [];
+              const indices = [];
+              
+              for (let ri = 0; ri <= rSteps; ri++) {
+                const r = 0.1 + (rMax * ri / rSteps);
+                for (let ti = 0; ti <= thetaSteps; ti++) {
+                  const theta = (ti / thetaSteps) * 2 * Math.PI;
+                  
+                  // log(z) = ln|z| + i*(arg(z) + 2πk)
+                  const logR = Math.log(r);
+                  const argZ = theta + 2 * Math.PI * sheet;
+                  
+                  // Position: x = ln|z|, z = arg, y = sheet height
+                  positions.push(logR, argZ / (2 * Math.PI), r * Math.cos(theta));
+                  
+                  const hue = (theta * 180 / Math.PI + 360) % 360;
+                  const lightness = 0.4 + sheet * 0.15;
+                  const [cr, cg, cb] = hslToRgb(hue, 0.7, lightness);
+                  colors.push(cr, cg, cb);
+                }
+              }
+              
+              for (let ri = 0; ri < rSteps; ri++) {
+                for (let ti = 0; ti < thetaSteps; ti++) {
+                  const a = ri * (thetaSteps + 1) + ti;
+                  const b = a + 1;
+                  const c = a + thetaSteps + 1;
+                  const d = c + 1;
+                  indices.push(a, b, c);
+                  indices.push(b, d, c);
+                }
+              }
+              
+              const geometry = new THREE.BufferGeometry();
+              geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+              geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+              geometry.setIndex(indices);
+              geometry.computeVertexNormals();
+              
+              const material = new THREE.MeshBasicMaterial({ 
+                vertexColors: true, 
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.75
+              });
+              
+              const mesh = new THREE.Mesh(geometry, material);
+              group.add(mesh);
+            }
+          } else if (fnType === 'z2') {
+            // z² is single-valued but wraps twice around
+            // Show input disk mapping to output via the covering
+            const rMax = 1.5;
+            const rSteps = 30;
+            const thetaSteps = 80;
+            
+            const positions = [];
+            const colors = [];
+            const indices = [];
+            
+            for (let ri = 0; ri <= rSteps; ri++) {
+              const r = 0.05 + (rMax * ri / rSteps);
+              for (let ti = 0; ti <= thetaSteps; ti++) {
+                const theta = (ti / thetaSteps) * 2 * Math.PI;
+                
+                // z² = r² * e^(2iθ)
+                const r2 = r * r;
+                const theta2 = 2 * theta;
+                
+                const wRe = r2 * Math.cos(theta2);
+                const wIm = r2 * Math.sin(theta2);
+                
+                // Height shows the "winding"
+                const height = theta / (2 * Math.PI);
+                
+                positions.push(wRe, height, wIm);
+                
+                const hue = (theta * 180 / Math.PI) % 360;
+                const [cr, cg, cb] = hslToRgb(hue, 0.8, 0.5);
+                colors.push(cr, cg, cb);
+              }
+            }
+            
+            for (let ri = 0; ri < rSteps; ri++) {
+              for (let ti = 0; ti < thetaSteps; ti++) {
+                const a = ri * (thetaSteps + 1) + ti;
+                const b = a + 1;
+                const c = a + thetaSteps + 1;
+                const d = c + 1;
+                indices.push(a, b, c);
+                indices.push(b, d, c);
+              }
+            }
+            
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+            
+            const material = new THREE.MeshBasicMaterial({ 
+              vertexColors: true, 
+              side: THREE.DoubleSide,
+              transparent: true,
+              opacity: 0.85
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            group.add(mesh);
+          }
+          
+          return group;
+        };
+        
+        const surface = buildSurface();
+        scene.add(surface);
+        
+        // Add axes
+        const axesHelper = new THREE.AxesHelper(2);
+        scene.add(axesHelper);
+        
+        // Mouse interaction
+        let isDragging = false;
+        let prevMouse = { x: 0, y: 0 };
+        let rotation = { x: 0.5, y: 0.5 };
+        
+        const onMouseDown = (e) => {
+          isDragging = true;
+          prevMouse = { x: e.clientX, y: e.clientY };
+        };
+        
+        const onMouseUp = () => { isDragging = false; };
+        
+        const onMouseMove = (e) => {
+          if (!isDragging) return;
+          const dx = e.clientX - prevMouse.x;
+          const dy = e.clientY - prevMouse.y;
+          rotation.y += dx * 0.01;
+          rotation.x += dy * 0.01;
+          rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotation.x));
+          prevMouse = { x: e.clientX, y: e.clientY };
+        };
+        
+        container.addEventListener('mousedown', onMouseDown);
+        container.addEventListener('mouseup', onMouseUp);
+        container.addEventListener('mouseleave', onMouseUp);
+        container.addEventListener('mousemove', onMouseMove);
+        
+        const animate = () => {
+          if (!isDragging) {
+            rotation.y += 0.005;
+          }
+          
+          const dist = 5;
+          camera.position.x = dist * Math.sin(rotation.y) * Math.cos(rotation.x);
+          camera.position.y = dist * Math.sin(rotation.x);
+          camera.position.z = dist * Math.cos(rotation.y) * Math.cos(rotation.x);
+          camera.lookAt(0, 0, 0);
+          
+          renderer.render(scene, camera);
+          animFrameRef.current = requestAnimationFrame(animate);
+        };
+        animate();
+        
+        return () => {
+          cancelAnimationFrame(animFrameRef.current);
+          container.removeEventListener('mousedown', onMouseDown);
+          container.removeEventListener('mouseup', onMouseUp);
+          container.removeEventListener('mouseleave', onMouseUp);
+          container.removeEventListener('mousemove', onMouseMove);
+          renderer.dispose();
+          container.removeChild(renderer.domElement);
+        };
+      }, [fnType, width, height]);
+      
+      return <div ref={containerRef} className="border border-gray-300 rounded cursor-grab" />;
+    };
+
+    // ============== ANIMATED TRANSFORMATION VIEW ==============
+    const AnimatedTransformView = ({ fn, width, height, range }) => {
+      const canvasRef = useRef(null);
+      const [t, setT] = useState(0);
+      const [playing, setPlaying] = useState(false);
+      const animRef = useRef(null);
+      
+      useEffect(() => {
+        if (playing) {
+          const start = Date.now();
+          const duration = 3000;
+          const animate = () => {
+            const elapsed = (Date.now() - start) % duration;
+            const progress = elapsed / duration;
+            // Smooth back and forth
+            const tVal = 0.5 - 0.5 * Math.cos(progress * 2 * Math.PI);
+            setT(tVal);
+            animRef.current = requestAnimationFrame(animate);
+          };
+          animRef.current = requestAnimationFrame(animate);
+        }
+        return () => {
+          if (animRef.current) cancelAnimationFrame(animRef.current);
+        };
+      }, [playing]);
+      
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, width, height);
+        
+        const toScreen = (z) => ({
+          x: width/2 + z.re * (width / (2 * range)),
+          y: height/2 - z.im * (height / (2 * range))
+        });
+        
+        // Draw grid
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 0.5;
+        for (let i = -10; i <= 10; i++) {
+          const x = width/2 + i * (width / (2 * range));
+          const y = height/2 - i * (height / (2 * range));
+          if (x >= 0 && x <= width) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
+          if (y >= 0 && y <= height) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
+        }
+        
+        // Axes
+        ctx.strokeStyle = '#9ca3af';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(0, height/2); ctx.lineTo(width, height/2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(width/2, 0); ctx.lineTo(width/2, height); ctx.stroke();
+        
+        // Draw curves with interpolation
+        const spacing = 0.4;
+        const steps = 80;
+        
+        // Horizontal curves
+        for (let y = -range; y <= range; y += spacing) {
+          ctx.beginPath();
+          let started = false;
+          const hue = ((y + range) / (2 * range)) * 180;
+          ctx.strokeStyle = `hsl(${hue}, 70%, 50%)`;
+          ctx.lineWidth = 1.5;
+          
+          for (let i = 0; i <= steps; i++) {
+            const x = -range + (2 * range * i / steps);
+            const z = { re: x, im: y };
+            const fz = fn(z);
+            
+            if (!isFinite(fz.re) || !isFinite(fz.im)) continue;
+            
+            // Interpolate
+            const w = {
+              re: z.re + (fz.re - z.re) * t,
+              im: z.im + (fz.im - z.im) * t
+            };
+            
+            if (Math.abs(w.re) > range * 1.5 || Math.abs(w.im) > range * 1.5) {
+              started = false;
+              continue;
+            }
+            
+            const p = toScreen(w);
+            if (!started) {
+              ctx.moveTo(p.x, p.y);
+              started = true;
+            } else {
+              ctx.lineTo(p.x, p.y);
+            }
+          }
+          ctx.stroke();
+        }
+        
+        // Vertical curves
+        for (let x = -range; x <= range; x += spacing) {
+          ctx.beginPath();
+          let started = false;
+          const hue = ((x + range) / (2 * range)) * 180 + 180;
+          ctx.strokeStyle = `hsl(${hue}, 70%, 50%)`;
+          ctx.lineWidth = 1.5;
+          
+          for (let i = 0; i <= steps; i++) {
+            const y = -range + (2 * range * i / steps);
+            const z = { re: x, im: y };
+            const fz = fn(z);
+            
+            if (!isFinite(fz.re) || !isFinite(fz.im)) continue;
+            
+            const w = {
+              re: z.re + (fz.re - z.re) * t,
+              im: z.im + (fz.im - z.im) * t
+            };
+            
+            if (Math.abs(w.re) > range * 1.5 || Math.abs(w.im) > range * 1.5) {
+              started = false;
+              continue;
+            }
+            
+            const p = toScreen(w);
+            if (!started) {
+              ctx.moveTo(p.x, p.y);
+              started = true;
+            } else {
+              ctx.lineTo(p.x, p.y);
+            }
+          }
+          ctx.stroke();
+        }
+        
+      }, [fn, width, height, range, t]);
+      
+      return (
+        <div className="flex flex-col items-center">
+          <canvas ref={canvasRef} width={width} height={height} className="border border-gray-300 rounded" />
+          <div className="mt-3 flex items-center gap-4">
+            <button 
+              onClick={() => setPlaying(!playing)}
+              className="px-4 py-2 bg-purple-600 text-white rounded font-medium hover:bg-purple-700"
+            >
+              {playing ? '⏸ Pause' : '▶ Play'}
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-sm">t = {t.toFixed(2)}</span>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.01" 
+                value={t}
+                onChange={e => { setPlaying(false); setT(parseFloat(e.target.value)); }}
+                className="w-32"
+              />
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ============== VECTOR FLOW TAB COMPONENT ==============
+    const VectorFlowTab = () => {
+      const canvasRef = useRef(null);
+      const [selectedFlow, setSelectedFlow] = useState('1/z');
+      const [useConjugate, setUseConjugate] = useState(true);
+      const [showParticles, setShowParticles] = useState(true);
+      const [particleCount, setParticleCount] = useState(200);
+      const [arrowDensity, setArrowDensity] = useState(15);
+      const [showTrails, setShowTrails] = useState(true);
+      
+      // Cauchy Lasso state
+      const [lassoCenter, setLassoCenter] = useState({ x: 0, y: 0 });
+      const [lassoRadius, setLassoRadius] = useState(0.8);
+      const [showLasso, setShowLasso] = useState(true);
+      const [contourIntegral, setContourIntegral] = useState({ re: 0, im: 0 });
+      const [isDraggingLasso, setIsDraggingLasso] = useState(false);
+      const [isResizingLasso, setIsResizingLasso] = useState(false);
+      
+      const particlesRef = useRef([]);
+      const animRef = useRef(null);
+      
+      const flowFunctions = {
+        '1/z': { 
+          fn: z => C.div({ re: 1, im: 0 }, z), 
+          label: '1/z — Simple Pole',
+          desc: 'Residue = 1. Integral around origin = 2πi ≈ 6.28i',
+          residueAt0: { re: 0, im: 2 * Math.PI }
+        },
+        '1/z²': { 
+          fn: z => C.div({ re: 1, im: 0 }, C.mul(z, z)), 
+          label: '1/z² — Double Pole',
+          desc: 'Residue = 0! The integral around origin = 0 (push and pull cancel)',
+          residueAt0: { re: 0, im: 0 }
+        },
+        '1/(z-1)': { 
+          fn: z => C.div({ re: 1, im: 0 }, C.sub(z, { re: 1, im: 0 })), 
+          label: '1/(z-1) — Shifted Pole',
+          desc: 'Pole at z=1. Integral = 2πi only if loop contains z=1',
+          singularities: [{ x: 1, y: 0 }]
+        },
+        'z': { 
+          fn: z => z, 
+          label: 'z — Entire Function',
+          desc: 'No singularities. Integral around ANY loop = 0 (Cauchy\'s Theorem)',
+        },
+        'z²': { 
+          fn: z => C.mul(z, z), 
+          label: 'z² — Entire Function',
+          desc: 'No singularities anywhere. All contour integrals = 0.',
+        },
+        'eᶻ': { 
+          fn: z => C.exp(z), 
+          label: 'eᶻ — Entire Function',
+          desc: 'No singularities. The exponential is analytic everywhere.',
+        },
+        '1/(z²+1)': { 
+          fn: z => C.div({ re: 1, im: 0 }, C.add(C.mul(z, z), { re: 1, im: 0 })), 
+          label: '1/(z²+1) — Two Poles',
+          desc: 'Poles at z = ±i. Each has residue = 1/(2i). Catch one → πi. Catch both → 0!',
+          singularities: [{ x: 0, y: 1 }, { x: 0, y: -1 }]
+        },
+        'log(z)': { 
+          fn: z => C.log(z), 
+          label: 'log(z) — Branch Point',
+          desc: 'Not a pole but a branch point. Integral depends on branch cut crossing.',
+        },
+        'z+1/z': { 
+          fn: z => C.add(z, C.div({ re: 1, im: 0 }, z)), 
+          label: 'z + 1/z — Joukowski',
+          desc: 'Simple pole at origin. Residue = 1 → Integral = 2πi around origin.',
+        },
+        'tan(z)': { 
+          fn: z => C.tan(z), 
+          label: 'tan(z) — Periodic Poles',
+          desc: 'Poles at z = ±π/2, ±3π/2, ... Each with residue = -1.',
+          singularities: [
+            { x: Math.PI/2, y: 0 }, { x: -Math.PI/2, y: 0 },
+            { x: 3*Math.PI/2, y: 0 }, { x: -3*Math.PI/2, y: 0 }
+          ]
+        },
+        '1/sin(z)': { 
+          fn: z => C.div({ re: 1, im: 0 }, C.sin(z)), 
+          label: '1/sin(z) — Poles at nπ',
+          desc: 'Poles at z = 0, ±π, ±2π... Residue at z=nπ is (-1)^n.',
+          singularities: [
+            { x: 0, y: 0 }, { x: Math.PI, y: 0 }, { x: -Math.PI, y: 0 },
+            { x: 2*Math.PI, y: 0 }, { x: -2*Math.PI, y: 0 }
+          ]
+        },
+      };
+      
+      const currentFlow = flowFunctions[selectedFlow];
+      
+      // Compute contour integral numerically: ∮ f(z) dz
+      const computeContourIntegral = useCallback((fn, cx, cy, r) => {
+        const N = 500; // Number of sample points
+        let sum = { re: 0, im: 0 };
+        
+        for (let i = 0; i < N; i++) {
+          const t = (2 * Math.PI * i) / N;
+          const tNext = (2 * Math.PI * (i + 1)) / N;
+          
+          // Point on contour: z = center + r * e^(it)
+          const z = {
+            re: cx + r * Math.cos(t),
+            im: cy + r * Math.sin(t)
+          };
+          
+          // dz = i * r * e^(it) * dt = i * (z - center) * dt
+          // Simplified: dz ≈ (z_next - z)
+          const zNext = {
+            re: cx + r * Math.cos(tNext),
+            im: cy + r * Math.sin(tNext)
+          };
+          const dz = C.sub(zNext, z);
+          
+          // f(z)
+          const fz = fn(z);
+          
+          if (isFinite(fz.re) && isFinite(fz.im)) {
+            // f(z) * dz
+            const contribution = C.mul(fz, dz);
+            sum = C.add(sum, contribution);
+          }
+        }
+        
+        return sum;
+      }, []);
+      
+      // Update contour integral when lasso moves
+      useEffect(() => {
+        if (showLasso && currentFlow) {
+          const integral = computeContourIntegral(
+            currentFlow.fn, 
+            lassoCenter.x, 
+            lassoCenter.y, 
+            lassoRadius
+          );
+          setContourIntegral(integral);
+        }
+      }, [lassoCenter, lassoRadius, currentFlow, showLasso, computeContourIntegral]);
+      
+      // Initialize particles
+      useEffect(() => {
+        const particles = [];
+        for (let i = 0; i < particleCount; i++) {
+          particles.push({
+            x: (Math.random() - 0.5) * 6,
+            y: (Math.random() - 0.5) * 6,
+            age: Math.random() * 100,
+            maxAge: 100 + Math.random() * 100
+          });
+        }
+        particlesRef.current = particles;
+      }, [particleCount, selectedFlow]);
+      
+      // Animation loop
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        const range = 3;
+        
+        const toScreen = (x, y) => ({
+          sx: width/2 + x * (width / (2 * range)),
+          sy: height/2 - y * (height / (2 * range))
+        });
+        
+        const fromScreen = (sx, sy) => ({
+          x: (sx - width/2) / (width / (2 * range)),
+          y: -(sy - height/2) / (height / (2 * range))
+        });
+        
+        const getVelocity = (x, y) => {
+          const z = { re: x, im: y };
+          let v = currentFlow.fn(z);
+          
+          if (useConjugate) {
+            v = C.conj(v);
+          }
+          
+          if (!isFinite(v.re) || !isFinite(v.im)) {
+            return { vx: 0, vy: 0, mag: 0 };
+          }
+          
+          const mag = C.abs(v);
+          return { vx: v.re, vy: v.im, mag };
+        };
+        
+        const draw = () => {
+          // Trail effect or clear
+          if (showTrails && showParticles) {
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.08)';
+          } else {
+            ctx.fillStyle = '#0f172a';
+          }
+          ctx.fillRect(0, 0, width, height);
+          
+          // Draw grid
+          ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+          ctx.lineWidth = 0.5;
+          for (let i = -10; i <= 10; i++) {
+            const { sx, sy } = toScreen(i, 0);
+            ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, height); ctx.stroke();
+            const { sx: sx2, sy: sy2 } = toScreen(0, i);
+            ctx.beginPath(); ctx.moveTo(0, sy2); ctx.lineTo(width, sy2); ctx.stroke();
+          }
+          
+          // Draw axes
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(0, height/2); ctx.lineTo(width, height/2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(width/2, 0); ctx.lineTo(width/2, height); ctx.stroke();
+          
+          // Draw vector field (arrows) - only if not showing trails (to reduce clutter)
+          if (!showTrails || !showParticles) {
+            const spacing = range * 2 / arrowDensity;
+            const arrowScale = spacing * 0.4;
+            
+            for (let gx = -range; gx <= range; gx += spacing) {
+              for (let gy = -range; gy <= range; gy += spacing) {
+                const { vx, vy, mag } = getVelocity(gx, gy);
+                
+                if (mag < 0.001 || mag > 100) continue;
+                
+                const normMag = Math.min(mag, 5) / 5;
+                const len = arrowScale * (0.3 + 0.7 * normMag);
+                const nx = vx / mag;
+                const ny = vy / mag;
+                
+                const { sx: x1, sy: y1 } = toScreen(gx, gy);
+                const { sx: x2, sy: y2 } = toScreen(gx + nx * len, gy + ny * len);
+                
+                const angle = Math.atan2(vy, vx);
+                const hue = ((angle * 180 / Math.PI) + 360) % 360;
+                const lightness = 40 + 30 * normMag;
+                
+                ctx.strokeStyle = `hsl(${hue}, 80%, ${lightness}%)`;
+                ctx.fillStyle = `hsl(${hue}, 80%, ${lightness}%)`;
+                ctx.lineWidth = 1.5;
+                
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+                
+                const headLen = 4;
+                const headAngle = Math.atan2(y1 - y2, x1 - x2);
+                ctx.beginPath();
+                ctx.moveTo(x2, y2);
+                ctx.lineTo(x2 + headLen * Math.cos(headAngle + 0.5), y2 + headLen * Math.sin(headAngle + 0.5));
+                ctx.lineTo(x2 + headLen * Math.cos(headAngle - 0.5), y2 + headLen * Math.sin(headAngle - 0.5));
+                ctx.closePath();
+                ctx.fill();
+              }
+            }
+          }
+          
+          // Update and draw particles
+          if (showParticles) {
+            const dt = 0.015;
+            const particles = particlesRef.current;
+            
+            for (let i = 0; i < particles.length; i++) {
+              const p = particles[i];
+              const { vx, vy, mag } = getVelocity(p.x, p.y);
+              
+              const speed = Math.min(mag, 3);
+              if (speed > 0.001) {
+                p.x += (vx / mag) * speed * dt;
+                p.y += (vy / mag) * speed * dt;
+              }
+              
+              p.age += 1;
+              
+              if (Math.abs(p.x) > range * 1.2 || Math.abs(p.y) > range * 1.2 || 
+                  p.age > p.maxAge || mag > 50 || mag < 0.001) {
+                p.x = (Math.random() - 0.5) * 6;
+                p.y = (Math.random() - 0.5) * 6;
+                p.age = 0;
+                p.maxAge = 100 + Math.random() * 100;
+              }
+              
+              const alpha = showTrails ? 0.9 : Math.max(0, 1 - p.age / p.maxAge) * 0.8;
+              const { sx, sy } = toScreen(p.x, p.y);
+              
+              const angle = Math.atan2(vy, vx);
+              const hue = ((angle * 180 / Math.PI) + 360) % 360;
+              
+              ctx.beginPath();
+              ctx.arc(sx, sy, showTrails ? 1.5 : 2, 0, Math.PI * 2);
+              ctx.fillStyle = `hsla(${hue}, 90%, 70%, ${alpha})`;
+              ctx.fill();
+            }
+          }
+          
+          // Draw singularity markers
+          const defaultSingularities = selectedFlow.includes('1/z') && !selectedFlow.includes('z-1') && !selectedFlow.includes('z²+1') 
+            ? [{ x: 0, y: 0 }] 
+            : (currentFlow.singularities || []);
+          
+          const singularities = selectedFlow === '1/z' || selectedFlow === '1/z²' || selectedFlow === 'log(z)' || selectedFlow === 'z+1/z'
+            ? [{ x: 0, y: 0 }]
+            : (currentFlow.singularities || []);
+            
+          ctx.fillStyle = 'rgba(255, 100, 100, 0.9)';
+          singularities.forEach(sing => {
+            const { sx, sy } = toScreen(sing.x, sing.y);
+            ctx.beginPath();
+            ctx.arc(sx, sy, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          });
+          
+          // Draw Cauchy Lasso
+          if (showLasso) {
+            const { sx: cx, sy: cy } = toScreen(lassoCenter.x, lassoCenter.y);
+            const screenRadius = lassoRadius * (width / (2 * range));
+            
+            // Check if any singularity is inside
+            let caughtSingularity = false;
+            singularities.forEach(sing => {
+              const dist = Math.sqrt((sing.x - lassoCenter.x)**2 + (sing.y - lassoCenter.y)**2);
+              if (dist < lassoRadius) caughtSingularity = true;
+            });
+            
+            // Draw the lasso circle
+            ctx.beginPath();
+            ctx.arc(cx, cy, screenRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = caughtSingularity ? '#fbbf24' : '#22d3ee';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Glow effect
+            ctx.beginPath();
+            ctx.arc(cx, cy, screenRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = caughtSingularity ? 'rgba(251, 191, 36, 0.3)' : 'rgba(34, 211, 238, 0.3)';
+            ctx.lineWidth = 8;
+            ctx.stroke();
+            
+            // Draw direction arrows on the contour
+            const numArrows = 8;
+            for (let i = 0; i < numArrows; i++) {
+              const angle = (2 * Math.PI * i) / numArrows;
+              const ax = cx + screenRadius * Math.cos(angle);
+              const ay = cy - screenRadius * Math.sin(angle);
+              
+              // Arrow pointing counterclockwise
+              const tangentAngle = angle + Math.PI / 2;
+              const arrowLen = 10;
+              
+              ctx.beginPath();
+              ctx.moveTo(ax, ay);
+              ctx.lineTo(
+                ax + arrowLen * Math.cos(-tangentAngle + 0.4),
+                ay + arrowLen * Math.sin(-tangentAngle + 0.4)
+              );
+              ctx.moveTo(ax, ay);
+              ctx.lineTo(
+                ax + arrowLen * Math.cos(-tangentAngle - 0.4),
+                ay + arrowLen * Math.sin(-tangentAngle - 0.4)
+              );
+              ctx.strokeStyle = caughtSingularity ? '#fbbf24' : '#22d3ee';
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+            
+            // Draw center handle
+            ctx.beginPath();
+            ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Draw resize handle
+            const handleX = cx + screenRadius;
+            const handleY = cy;
+            ctx.beginPath();
+            ctx.arc(handleX, handleY, 6, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Draw integral value
+            const integralText = `∮ f(z)dz = ${contourIntegral.re.toFixed(3)} + ${contourIntegral.im.toFixed(3)}i`;
+            ctx.font = 'bold 16px monospace';
+            ctx.fillStyle = caughtSingularity ? '#fbbf24' : '#22d3ee';
+            ctx.fillText(integralText, cx - 100, cy - screenRadius - 15);
+            
+            // Show 2πi reference if close
+            const twoPiI = 2 * Math.PI;
+            if (Math.abs(contourIntegral.im - twoPiI) < 0.1 && Math.abs(contourIntegral.re) < 0.1) {
+              ctx.fillStyle = '#22c55e';
+              ctx.fillText('≈ 2πi ✓', cx + 110, cy - screenRadius - 15);
+            } else if (Math.abs(contourIntegral.im + twoPiI) < 0.1 && Math.abs(contourIntegral.re) < 0.1) {
+              ctx.fillStyle = '#22c55e';
+              ctx.fillText('≈ -2πi ✓', cx + 110, cy - screenRadius - 15);
+            } else if (Math.abs(contourIntegral.im) < 0.1 && Math.abs(contourIntegral.re) < 0.1) {
+              ctx.fillStyle = '#22c55e';
+              ctx.fillText('≈ 0 ✓', cx + 110, cy - screenRadius - 15);
+            } else if (Math.abs(contourIntegral.im - Math.PI) < 0.1 && Math.abs(contourIntegral.re) < 0.1) {
+              ctx.fillStyle = '#22c55e';
+              ctx.fillText('≈ πi ✓', cx + 110, cy - screenRadius - 15);
+            }
+          }
+          
+          animRef.current = requestAnimationFrame(draw);
+        };
+        
+        draw();
+        
+        return () => {
+          if (animRef.current) cancelAnimationFrame(animRef.current);
+        };
+      }, [currentFlow, useConjugate, showParticles, arrowDensity, selectedFlow, showLasso, lassoCenter, lassoRadius, contourIntegral, showTrails]);
+      
+      // Mouse handlers for lasso
+      const handleMouseDown = (e) => {
+        if (!showLasso) return;
+        
+        const canvas = canvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        
+        const width = canvas.width;
+        const height = canvas.height;
+        const range = 3;
+        
+        const { sx: cx, sy: cy } = {
+          sx: width/2 + lassoCenter.x * (width / (2 * range)),
+          sy: height/2 - lassoCenter.y * (height / (2 * range))
+        };
+        const screenRadius = lassoRadius * (width / (2 * range));
+        
+        // Check resize handle
+        const handleX = cx + screenRadius;
+        const handleY = cy;
+        if (Math.sqrt((mx - handleX)**2 + (my - handleY)**2) < 15) {
+          setIsResizingLasso(true);
+          return;
+        }
+        
+        // Check center handle
+        if (Math.sqrt((mx - cx)**2 + (my - cy)**2) < 15) {
+          setIsDraggingLasso(true);
+          return;
+        }
+      };
+      
+      const handleMouseMove = (e) => {
+        if (!isDraggingLasso && !isResizingLasso) return;
+        
+        const canvas = canvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        
+        const width = canvas.width;
+        const height = canvas.height;
+        const range = 3;
+        
+        const worldX = (mx - width/2) / (width / (2 * range));
+        const worldY = -(my - height/2) / (height / (2 * range));
+        
+        if (isDraggingLasso) {
+          setLassoCenter({ x: worldX, y: worldY });
+        } else if (isResizingLasso) {
+          const dist = Math.sqrt((worldX - lassoCenter.x)**2 + (worldY - lassoCenter.y)**2);
+          setLassoRadius(Math.max(0.1, Math.min(2.5, dist)));
+        }
+      };
+      
+      const handleMouseUp = () => {
+        setIsDraggingLasso(false);
+        setIsResizingLasso(false);
+      };
+      
+      return (
+        <div className="space-y-4">
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h2 className="font-bold text-lg mb-2">Pólya Vector Field + Cauchy's Lasso</h2>
+            <p className="text-gray-600 text-sm mb-4">
+              Drag the <span className="text-cyan-500 font-bold">cyan lasso</span> around the plane. 
+              The contour integral ∮ f(z)dz is computed in real-time. 
+              Catch a singularity and watch the integral snap to <span className="font-mono">2πi</span>!
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(flowFunctions).map(([key, { label }]) => (
+                <button key={key}
+                  onClick={() => setSelectedFlow(key)}
+                  className={`px-3 py-2 rounded text-sm font-medium ${selectedFlow === key ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg shadow flex flex-wrap gap-6 items-center">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={showLasso} onChange={e => setShowLasso(e.target.checked)} />
+              <span className="font-medium">Show Lasso</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={useConjugate} onChange={e => setUseConjugate(e.target.checked)} />
+              <span>f̄(z) (Physical Flow)</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={showParticles} onChange={e => setShowParticles(e.target.checked)} />
+              <span>Particles</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={showTrails} onChange={e => setShowTrails(e.target.checked)} />
+              <span>Trails</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm">Particles:</span>
+              <input type="range" min="50" max="500" value={particleCount}
+                onChange={e => setParticleCount(parseInt(e.target.value))} className="w-20" />
+            </div>
+          </div>
+          
+          <div className="flex flex-col items-center">
+            <canvas 
+              ref={canvasRef} 
+              width={700} 
+              height={600} 
+              className="border border-gray-300 rounded cursor-crosshair"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            />
+            <p className="text-sm text-gray-500 mt-2">
+              Drag center to move lasso. Drag edge handle to resize. Red dots = singularities.
+            </p>
+          </div>
+          
+          {/* Integral Display Panel */}
+          <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-lg text-cyan-400">Contour Integral</h3>
+                <p className="font-mono text-2xl mt-1">
+                  ∮ f(z) dz = <span className="text-yellow-300">{contourIntegral.re.toFixed(4)}</span> + <span className="text-yellow-300">{contourIntegral.im.toFixed(4)}</span>i
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-400">Reference values:</p>
+                <p className="text-sm font-mono">2πi ≈ 6.2832i</p>
+                <p className="text-sm font-mono">πi ≈ 3.1416i</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg">
+            <h3 className="font-bold text-lg">{currentFlow.label}</h3>
+            <p className="text-sm text-gray-700 mt-1">{currentFlow.desc}</p>
+          </div>
+          
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+            <h3 className="font-bold">🎯 The Residue Theorem in Action</h3>
+            <div className="text-sm text-gray-700 mt-2 space-y-2">
+              <p><strong>Try these experiments:</strong></p>
+              <ol className="list-decimal list-inside space-y-1 ml-2">
+                <li>Select <code>1/z</code>. Drag lasso over origin → <strong>2πi</strong>. Move it away → <strong>0</strong>.</li>
+                <li>Select <code>1/z²</code>. Drag lasso over origin → <strong>0</strong>! (The double pole has residue 0)</li>
+                <li>Select <code>1/(z²+1)</code>. Catch just +i → <strong>πi</strong>. Catch just -i → <strong>πi</strong>. Catch both → <strong>0</strong>!</li>
+                <li>Select <code>z²</code> or <code>eᶻ</code>. No matter where you drag → <strong>0</strong>. (No singularities!)</li>
+                <li>Select <code>1/(z-1)</code>. The pole is at z=1. Only catches when lasso contains that point.</li>
+              </ol>
+              <p className="mt-3 text-gray-600 italic">
+                The integral doesn't care about the shape or size of the loop — only what's inside.
+                This is topology masquerading as calculus.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ============== MAIN APP ==============
+    function App() {
+      const [activeTab, setActiveTab] = useState('surface');
+      const [selectedFn, setSelectedFn] = useState('z²');
+      const [surfaceType, setSurfaceType] = useState('sqrt');
+      const [currentLocale, setCurrentLocale] = useState('en-US');
+      const [showHelp, setShowHelp] = useState(false);
+      
+      const t = locales[currentLocale] || locales['en-US'];
+      const currentFn = functions[selectedFn] || functions['z²'];
+      
+      return (
+        <LocaleContext.Provider value={currentLocale}>
+          <div className="min-h-screen bg-gray-50">
+            {/* Help Modal */}
+            <ModalOverlay isOpen={showHelp} onClick={() => setShowHelp(false)} />
+            <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
+            
+            <header className="bg-gradient-to-r from-indigo-900 to-purple-900 text-white">
+              <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div>
+                  <h1 className="text-2xl font-bold">{t.app.title}</h1>
+                  <p className="text-indigo-200 text-sm">{t.app.subtitle}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {/* Language selector (for future use) */}
+                  <select 
+                    value={currentLocale}
+                    onChange={(e) => setCurrentLocale(e.target.value)}
+                    className="bg-indigo-800 text-white text-sm rounded px-2 py-1 border border-indigo-600"
+                  >
+                    {Object.entries(locales).map(([code, loc]) => (
+                      <option key={code} value={code}>{loc.meta.nativeName}</option>
+                    ))}
+                  </select>
+                  <button 
+                    onClick={() => setShowHelp(true)}
+                    className="bg-white text-indigo-900 px-4 py-2 rounded-lg font-medium hover:bg-indigo-100 transition-colors flex items-center gap-2"
+                  >
+                    <span>📖</span> {t.app.helpButton}
+                  </button>
+                </div>
+              </div>
+            </header>
+          
+          {/* Tabs */}
+          <div className="bg-white border-b shadow-sm">
+            <div className="max-w-6xl mx-auto px-4 flex gap-6">
+              {[
+                { id: 'surface', label: t.tabs.surface },
+                { id: 'sphere', label: t.tabs.sphere },
+                { id: 'tissot', label: t.tabs.tissot },
+                { id: 'morph', label: t.tabs.morph },
+                { id: 'flow', label: t.tabs.flow },
+              ].map(tab => (
+                <button key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-3 px-1 text-sm font-medium ${activeTab === tab.id ? 'tab-active text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <main className="max-w-6xl mx-auto px-4 py-6">
+            
+            {/* ============ RIEMANN SURFACES TAB ============ */}
+            {activeTab === 'surface' && (
+              <div className="space-y-4">
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <h2 className="font-bold text-lg mb-2">The Multi-Sheeted Reality</h2>
+                  <p className="text-gray-600 text-sm mb-4">
+                    Functions like √z and log(z) are continuous — they just live on a "parking garage" with multiple floors. 
+                    The apparent "tear" in 2D views is where the floors connect. Here you see the actual 3D structure.
+                  </p>
+                  <div className="flex gap-2">
+                    {[
+                      { id: 'sqrt', label: '√z (2 sheets)' },
+                      { id: 'log', label: 'log(z) (∞ sheets)' },
+                      { id: 'z2', label: 'z² (covering map)' },
+                    ].map(s => (
+                      <button key={s.id}
+                        onClick={() => setSurfaceType(s.id)}
+                        className={`px-4 py-2 rounded text-sm font-medium ${surfaceType === s.id ? 'bg-indigo-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-center">
+                  <RiemannSurfaceView fnType={surfaceType} width={600} height={500} />
+                  <p className="text-sm text-gray-500 mt-2">Drag to rotate. Height axis shows the different branches.</p>
+                </div>
+                
+                <div className="bg-indigo-50 p-4 rounded-lg">
+                  {surfaceType === 'sqrt' && (
+                    <div>
+                      <h3 className="font-bold">√z: The Two-Sheeted Surface</h3>
+                      <p className="text-sm text-gray-700 mt-1">
+                        Walking around the origin once (360°) in the input takes you only halfway around the output (180°). 
+                        You must go around <em>twice</em> to return to your starting point. The two sheets connect at the 
+                        origin — the <strong>branch point</strong>. The red line shows the branch cut.
+                      </p>
+                    </div>
+                  )}
+                  {surfaceType === 'log' && (
+                    <div>
+                      <h3 className="font-bold">log(z): The Infinite Spiral</h3>
+                      <p className="text-sm text-gray-700 mt-1">
+                        Each trip around the origin adds 2πi to the result. The surface spirals infinitely upward and downward — 
+                        infinitely many sheets. This is why log(z) is "multi-valued": there's a different answer on each floor.
+                        The sheets shown are k = -1, 0, +1.
+                      </p>
+                    </div>
+                  )}
+                  {surfaceType === 'z2' && (
+                    <div>
+                      <h3 className="font-bold">z²: The Double Cover</h3>
+                      <p className="text-sm text-gray-700 mt-1">
+                        z² is single-valued, but it's the <em>inverse</em> of √z. This view shows how a disk wraps twice 
+                        around itself when squared. The color gradient reveals how one full rotation in input (360°) 
+                        becomes two full rotations in output (720°). This is the "two-to-one" covering.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* ============ RIEMANN SPHERE TAB ============ */}
+            {activeTab === 'sphere' && (
+              <div className="space-y-4">
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <h2 className="font-bold text-lg mb-2">The Sphere at Infinity</h2>
+                  <p className="text-gray-600 text-sm mb-4">
+                    The complex plane wraps onto a sphere via stereographic projection. The origin is the South Pole. 
+                    Infinity is the North Pole (red dot). On this sphere, 1/z simply flips the sphere upside-down. 
+                    Lines through infinity become great circles.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {['z', '1/z', '(z-1)/(z+1)', 'z²', 'eᶻ'].map(fn => (
+                      <button key={fn}
+                        onClick={() => setSelectedFn(fn)}
+                        className={`px-3 py-2 rounded text-sm font-medium ${selectedFn === fn ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      >
+                        {functions[fn]?.label || fn}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-center">
+                  <RiemannSphereView fn={currentFn.fn} width={600} height={500} />
+                  <p className="text-sm text-gray-500 mt-2">
+                    Red = North Pole (∞), Blue = South Pole (0). Drag to rotate.
+                  </p>
+                </div>
+                
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-bold">Why This Matters</h3>
+                  <p className="text-sm text-gray-700 mt-1">
+                    On the sphere, there's no edge. The function 1/z doesn't "blow up" — it smoothly maps the South Pole 
+                    to the North Pole. Möbius transformations (az+b)/(cz+d) become rotations and inversions of this sphere. 
+                    The "missing" point at infinity is now visible and participates in the geometry.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* ============ TISSOT TAB ============ */}
+            {activeTab === 'tissot' && (
+              <div className="space-y-4">
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <h2 className="font-bold text-lg mb-2">Tissot's Indicatrix: The Conformality Test</h2>
+                  <p className="text-gray-600 text-sm mb-4">
+                    Fill the plane with small circles. Under an <strong>analytic</strong> function, circles → circles 
+                    (possibly different sizes). Under a <strong>non-analytic</strong> function, circles → ellipses. 
+                    This is the visual proof that f'(z) being a single complex number means uniform local scaling.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(functions).map(([key, { label, analytic }]) => (
+                      <button key={key}
+                        onClick={() => setSelectedFn(key)}
+                        className={`px-3 py-2 rounded text-sm font-medium ${selectedFn === key ? (analytic ? 'bg-green-600 text-white' : 'bg-red-600 text-white') : 'bg-gray-100 hover:bg-gray-200'}`}
+                      >
+                        {label} {analytic ? '' : '⚠'}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">⚠ = non-analytic (expect ellipses)</p>
+                </div>
+                
+                <div className="flex flex-col items-center">
+                  <TissotCanvas 
+                    fn={currentFn.fn} 
+                    width={600} 
+                    height={600} 
+                    range={3} 
+                    isAnalytic={currentFn.analytic}
+                  />
+                </div>
+                
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h3 className="font-bold">The Deep Reason</h3>
+                  <p className="text-sm text-gray-700 mt-1">
+                    An analytic function has a derivative f'(z) that is a <em>complex number</em>, not a 2×2 matrix. 
+                    Multiplication by a complex number = scaling + rotation, applied uniformly in all directions. 
+                    That's why circles stay circles. A non-analytic function (like z̄ or Re(z)) has a Jacobian with 
+                    independent entries that can stretch different directions differently → ellipses.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* ============ MORPH TAB ============ */}
+            {activeTab === 'morph' && (
+              <div className="space-y-4">
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <h2 className="font-bold text-lg mb-2">Continuous Deformation: z → f(z)</h2>
+                  <p className="text-gray-600 text-sm mb-4">
+                    Watch the grid continuously morph from identity to the transformed state. 
+                    At t=0 you see the input plane; at t=1 you see the output. The interpolation 
+                    reveals how space is being stretched and rotated.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {['z²', 'z³', 'eᶻ', '1/z', 'sin(z)', '(z-1)/(z+1)', '√z'].map(fn => (
+                      <button key={fn}
+                        onClick={() => setSelectedFn(fn)}
+                        className={`px-3 py-2 rounded text-sm font-medium ${selectedFn === fn ? 'bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      >
+                        {functions[fn]?.label || fn}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-center">
+                  <div className="text-lg font-medium mb-2">{currentFn.label}</div>
+                  <AnimatedTransformView fn={currentFn.fn} width={600} height={600} range={3} />
+                </div>
+              </div>
+            )}
+            
+            {/* ============ VECTOR FLOW TAB ============ */}
+            {activeTab === 'flow' && (
+              <VectorFlowTab />
+            )}
+            
+          </main>
+          
+          <footer className="bg-gray-100 border-t mt-8 py-4">
+            <div className="max-w-6xl mx-auto px-4 text-center text-sm text-gray-500">
+              {t.app.footer}
+            </div>
+          </footer>
+        </div>
+      </LocaleContext.Provider>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
