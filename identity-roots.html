@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roots of Unity</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background-color: #1a1a1f; }
+    #root { min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const RootsOfUnity = () => {
+      const [n, setN] = useState(5);
+      const [angleMode, setAngleMode] = useState('degrees');
+      const svgRef = useRef(null);
+      const lastClickTime = useRef(0);
+      
+      const size = 420;
+      const center = size / 2;
+      const radius = 140;
+      
+      const getRoots = (n) => {
+        const roots = [];
+        for (let k = 0; k < n; k++) {
+          const angle = (2 * Math.PI * k) / n;
+          roots.push({
+            k,
+            angle,
+            x: Math.cos(angle),
+            y: Math.sin(angle),
+            real: Math.cos(angle),
+            imag: Math.sin(angle)
+          });
+        }
+        return roots;
+      };
+      
+      const roots = getRoots(n);
+      
+      const sum = roots.reduce(
+        (acc, r) => ({ real: acc.real + r.real, imag: acc.imag + r.imag }),
+        { real: 0, imag: 0 }
+      );
+      
+      const handleButtonClick = (val) => {
+        const now = Date.now();
+        
+        if (val === 7 && n >= 7) {
+          if (now - lastClickTime.current < 300) {
+            setN(7);
+          } else {
+            setN(prev => prev + 1);
+          }
+        } else {
+          setN(val);
+        }
+        
+        lastClickTime.current = now;
+      };
+      
+      const formatAngle = (angle, mode) => {
+        if (mode === 'degrees') {
+          const deg = (angle * 180 / Math.PI);
+          return `${Math.round(deg)}°`;
+        } else {
+          const piMultiple = angle / Math.PI;
+          if (Math.abs(piMultiple) < 0.001) return '0';
+          if (Math.abs(piMultiple - 2) < 0.001) return '2π';
+          if (Math.abs(piMultiple - 1) < 0.001) return 'π';
+          if (Math.abs(piMultiple - 0.5) < 0.001) return 'π/2';
+          if (Math.abs(piMultiple - 1.5) < 0.001) return '3π/2';
+          
+          for (let den = 2; den <= 20; den++) {
+            for (let num = 1; num < den * 2; num++) {
+              if (Math.abs(piMultiple - num / den) < 0.001) {
+                if (num === den) return 'π';
+                return num === 1 ? `π/${den}` : `${num}π/${den}`;
+              }
+            }
+          }
+          
+          return `${piMultiple.toFixed(2)}π`;
+        }
+      };
+
+      useEffect(() => {
+        if (!svgRef.current) return;
+        
+        const svg = d3.select(svgRef.current);
+        svg.selectAll('*').remove();
+        
+        const g = svg.append('g').attr('transform', `translate(${center}, ${center})`);
+        
+        [0.5, 1].forEach(r => {
+          g.append('circle')
+            .attr('r', r * radius)
+            .attr('fill', 'none')
+            .attr('stroke', 'rgba(255,255,255,0.08)')
+            .attr('stroke-width', 1);
+        });
+        
+        g.append('line')
+          .attr('x1', -radius - 30).attr('x2', radius + 30)
+          .attr('y1', 0).attr('y2', 0)
+          .attr('stroke', 'rgba(255,255,255,0.15)')
+          .attr('stroke-width', 1);
+        
+        g.append('line')
+          .attr('x1', 0).attr('x2', 0)
+          .attr('y1', -radius - 30).attr('y2', radius + 30)
+          .attr('stroke', 'rgba(255,255,255,0.15)')
+          .attr('stroke-width', 1);
+        
+        const labelStyle = {
+          fill: 'rgba(255,255,255,0.4)',
+          fontSize: '11px',
+          fontFamily: 'Georgia, serif'
+        };
+        
+        g.append('text').attr('x', radius + 20).attr('y', 4).text('Re').style('fill', labelStyle.fill).style('font-size', labelStyle.fontSize).style('font-family', labelStyle.fontFamily);
+        g.append('text').attr('x', 6).attr('y', -radius - 15).text('Im').style('fill', labelStyle.fill).style('font-size', labelStyle.fontSize).style('font-family', labelStyle.fontFamily);
+        
+        g.append('circle')
+          .attr('r', radius)
+          .attr('fill', 'none')
+          .attr('stroke', 'rgba(255,255,255,0.25)')
+          .attr('stroke-width', 1.5);
+        
+        const baseColors = [
+          '#E8B4B8', '#B4D4E8', '#D4E8B4', '#E8D4B4', 
+          '#D4B4E8', '#B4E8D4', '#E8E4B4', '#B4C8E8',
+          '#E8B4D4', '#C8E8B4', '#E8C8B4', '#B4E8E8'
+        ];
+        
+        const colors = d3.scaleOrdinal()
+          .domain(d3.range(n))
+          .range(baseColors);
+        
+        roots.forEach((root, i) => {
+          const x = root.x * radius;
+          const y = -root.y * radius;
+          
+          g.append('line')
+            .attr('x1', 0)
+            .attr('y1', 0)
+            .attr('x2', 0)
+            .attr('y2', 0)
+            .attr('stroke', colors(i))
+            .attr('stroke-width', 1.5)
+            .attr('stroke-opacity', 0.6)
+            .transition()
+            .duration(400)
+            .delay(i * Math.max(20, 50 - n))
+            .attr('x2', x)
+            .attr('y2', y);
+          
+          g.append('circle')
+            .attr('cx', x)
+            .attr('cy', y)
+            .attr('r', 0)
+            .attr('fill', colors(i))
+            .attr('stroke', '#fff')
+            .attr('stroke-width', n > 15 ? 1 : 1.5)
+            .transition()
+            .duration(300)
+            .delay(i * Math.max(20, 50 - n) + 200)
+            .attr('r', n > 15 ? 3 : n > 10 ? 4 : 6);
+          
+          const labelRadius = 1.25;
+          const labelX = root.x * radius * labelRadius;
+          const labelY = -root.y * radius * labelRadius;
+          
+          if (n <= 12) {
+            const labelGroup = g.append('g')
+              .attr('transform', `translate(${labelX}, ${labelY})`)
+              .style('opacity', 0);
+            
+            labelGroup.append('text')
+              .attr('y', -6)
+              .text(`ζ${superscript(root.k)}`)
+              .style('fill', 'rgba(255,255,255,0.7)')
+              .style('font-size', n > 10 ? '10px' : '12px')
+              .style('font-family', 'Georgia, serif')
+              .style('text-anchor', 'middle');
+            
+            labelGroup.append('text')
+              .attr('y', 8)
+              .text(formatAngle(root.angle, angleMode))
+              .style('fill', 'rgba(255,255,255,0.4)')
+              .style('font-size', n > 10 ? '8px' : '10px')
+              .style('font-family', 'Georgia, serif')
+              .style('text-anchor', 'middle');
+            
+            labelGroup.transition()
+              .duration(300)
+              .delay(i * Math.max(20, 50 - n) + 350)
+              .style('opacity', 1);
+          }
+        });
+        
+        g.append('circle')
+          .attr('cx', 0)
+          .attr('cy', 0)
+          .attr('r', 3)
+          .attr('fill', 'rgba(255,255,255,0.5)');
+        
+      }, [n, angleMode, roots]);
+      
+      const superscript = (num) => {
+        const supers = ['⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹'];
+        return String(num).split('').map(d => supers[parseInt(d)]).join('');
+      };
+      
+      const formatComplex = (real, imag) => {
+        const r = Math.abs(real) < 1e-10 ? 0 : real;
+        const i = Math.abs(imag) < 1e-10 ? 0 : imag;
+        if (r === 0 && i === 0) return '0';
+        return `${r.toFixed(10)} + ${i.toFixed(10)}i`;
+      };
+      
+      const formatComplexNice = (real, imag) => {
+        const r = Math.abs(real) < 1e-10 ? 0 : real;
+        const i = Math.abs(imag) < 1e-10 ? 0 : imag;
+        
+        const rStr = r === 0 ? '0' : r === 1 ? '1' : r === -1 ? '−1' : r.toFixed(4).replace(/-/, '−');
+        const iAbs = Math.abs(i);
+        const iStr = iAbs === 0 ? '' : iAbs === 1 ? 'i' : `${iAbs.toFixed(4)}i`;
+        
+        if (i === 0) return rStr;
+        if (r === 0) return i < 0 ? `−${iStr}` : iStr;
+        
+        const sign = i < 0 ? ' − ' : ' + ';
+        return `${rStr}${sign}${iStr}`;
+      };
+
+      const styles = {
+        container: {
+          minHeight: '100vh',
+          backgroundColor: '#1a1a1f',
+          color: '#fff',
+          fontFamily: 'Georgia, serif',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: '40px 20px'
+        },
+        title: {
+          fontSize: '28px',
+          fontWeight: '400',
+          letterSpacing: '0.05em',
+          marginBottom: '8px',
+          color: 'rgba(255,255,255,0.9)'
+        },
+        subtitle: {
+          fontSize: '16px',
+          color: 'rgba(255,255,255,0.5)',
+          marginBottom: '32px',
+          fontStyle: 'italic'
+        },
+        buttonContainer: {
+          display: 'flex',
+          gap: '8px',
+          marginBottom: '16px',
+          flexWrap: 'wrap',
+          justifyContent: 'center'
+        },
+        nLabel: {
+          fontSize: '14px',
+          color: 'rgba(255,255,255,0.4)',
+          marginBottom: '8px'
+        },
+        hint: {
+          fontSize: '11px',
+          marginLeft: '12px',
+          color: 'rgba(255,255,255,0.3)'
+        },
+        toggleContainer: {
+          display: 'flex',
+          gap: '4px',
+          marginBottom: '24px',
+          backgroundColor: 'rgba(255,255,255,0.05)',
+          borderRadius: '20px',
+          padding: '4px'
+        },
+        sumContainer: {
+          marginTop: '32px',
+          textAlign: 'center'
+        },
+        sumLabel: {
+          fontSize: '14px',
+          color: 'rgba(255,255,255,0.5)',
+          marginBottom: '8px'
+        },
+        sumDisplay: {
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '12px'
+        },
+        sumSymbol: {
+          fontSize: '18px',
+          color: 'rgba(255,255,255,0.7)',
+          fontFamily: 'Georgia, serif'
+        },
+        sumValue: {
+          fontSize: '32px',
+          fontWeight: '300',
+          color: '#B4D4E8',
+          fontFamily: 'Georgia, serif'
+        },
+        sumDetail: {
+          fontSize: '12px',
+          color: 'rgba(255,255,255,0.3)',
+          marginTop: '16px',
+          fontFamily: 'monospace'
+        },
+        formulaBox: {
+          marginTop: '40px',
+          padding: '20px 32px',
+          backgroundColor: 'rgba(255,255,255,0.03)',
+          borderRadius: '8px',
+          border: '1px solid rgba(255,255,255,0.08)'
+        },
+        formula: {
+          fontSize: '14px',
+          color: 'rgba(255,255,255,0.6)',
+          textAlign: 'center',
+          lineHeight: 1.8
+        },
+        tableContainer: {
+          marginTop: '40px',
+          width: '100%',
+          maxWidth: '420px'
+        },
+        tableTitle: {
+          fontSize: '16px',
+          fontWeight: '400',
+          color: 'rgba(255,255,255,0.7)',
+          marginBottom: '16px',
+          textAlign: 'center'
+        },
+        table: {
+          backgroundColor: 'rgba(255,255,255,0.03)',
+          borderRadius: '8px',
+          border: '1px solid rgba(255,255,255,0.08)',
+          overflow: 'hidden'
+        },
+        tableHeader: {
+          display: 'grid',
+          gridTemplateColumns: '50px 1fr',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+          backgroundColor: 'rgba(255,255,255,0.02)'
+        },
+        tableHeaderCell: {
+          padding: '12px 16px',
+          fontSize: '12px',
+          color: 'rgba(255,255,255,0.5)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em'
+        },
+        tableBody: {
+          maxHeight: '280px',
+          overflowY: 'auto'
+        },
+        tableRow: {
+          display: 'grid',
+          gridTemplateColumns: '50px 1fr'
+        },
+        tableCell: {
+          padding: '10px 16px',
+          fontSize: '14px',
+          color: 'rgba(255,255,255,0.7)',
+          fontFamily: 'Georgia, serif'
+        },
+        tableCellMono: {
+          padding: '10px 16px',
+          fontSize: '13px',
+          color: 'rgba(255,255,255,0.6)',
+          fontFamily: 'monospace'
+        }
+      };
+
+      const getButtonStyle = (val) => ({
+        width: '40px',
+        height: '40px',
+        borderRadius: '50%',
+        border: (n === val || (val === 7 && n >= 7)) 
+          ? '2px solid rgba(255,255,255,0.8)' 
+          : '1px solid rgba(255,255,255,0.2)',
+        backgroundColor: (n === val || (val === 7 && n >= 7)) 
+          ? 'rgba(255,255,255,0.1)' 
+          : 'transparent',
+        color: (n === val || (val === 7 && n >= 7)) 
+          ? '#fff' 
+          : 'rgba(255,255,255,0.5)',
+        cursor: 'pointer',
+        fontSize: '16px',
+        fontFamily: 'Georgia, serif',
+        transition: 'all 0.2s ease'
+      });
+
+      const getToggleStyle = (mode) => ({
+        padding: '6px 16px',
+        borderRadius: '16px',
+        border: 'none',
+        backgroundColor: angleMode === mode ? 'rgba(255,255,255,0.15)' : 'transparent',
+        color: angleMode === mode ? '#fff' : 'rgba(255,255,255,0.5)',
+        cursor: 'pointer',
+        fontSize: '12px',
+        fontFamily: 'Georgia, serif',
+        transition: 'all 0.2s ease'
+      });
+
+      return (
+        <div style={styles.container}>
+          <h1 style={styles.title}>Roots of Unity</h1>
+          
+          <p style={styles.subtitle}>
+            ζ = e<sup>2πi/n</sup>
+          </p>
+          
+          <div style={styles.buttonContainer}>
+            {[1,2,3,4,5,6,7].map(val => (
+              <button
+                key={val}
+                onClick={() => handleButtonClick(val)}
+                style={getButtonStyle(val)}
+              >
+                {val === 7 && n > 7 ? n : val}
+              </button>
+            ))}
+          </div>
+          
+          <p style={styles.nLabel}>
+            n = {n}
+            {n >= 7 && (
+              <span style={styles.hint}>
+                (click to increment, double-click to reset)
+              </span>
+            )}
+          </p>
+          
+          <div style={styles.toggleContainer}>
+            <button onClick={() => setAngleMode('degrees')} style={getToggleStyle('degrees')}>
+              degrees
+            </button>
+            <button onClick={() => setAngleMode('radians')} style={getToggleStyle('radians')}>
+              radians
+            </button>
+          </div>
+          
+          <svg ref={svgRef} width={size} height={size} style={{ overflow: 'visible' }} />
+          
+          <div style={styles.sumContainer}>
+            <p style={styles.sumLabel}>Sum of all {n} roots:</p>
+            
+            <div style={styles.sumDisplay}>
+              <span style={styles.sumSymbol}>Σ ζ<sup>k</sup> =</span>
+              <span style={styles.sumValue}>0</span>
+            </div>
+            
+            <p style={styles.sumDetail}>({formatComplex(sum.real, sum.imag)})</p>
+          </div>
+          
+          <div style={styles.formulaBox}>
+            <p style={styles.formula}>
+              <span style={{ fontStyle: 'italic' }}>
+                1 + ζ + ζ² + ⋯ + ζ<sup>n−1</sup>
+              </span>
+              <span style={{ margin: '0 12px', color: 'rgba(255,255,255,0.3)' }}>=</span>
+              <span>(1 − ζ<sup>n</sup>) / (1 − ζ)</span>
+              <span style={{ margin: '0 12px', color: 'rgba(255,255,255,0.3)' }}>=</span>
+              <span>(1 − 1) / (1 − ζ)</span>
+              <span style={{ margin: '0 12px', color: 'rgba(255,255,255,0.3)' }}>=</span>
+              <span style={{ color: '#B4D4E8', fontWeight: '500' }}>0</span>
+            </p>
+          </div>
+          
+          <div style={styles.tableContainer}>
+            <h3 style={styles.tableTitle}>The {n} Roots</h3>
+            
+            <div style={styles.table}>
+              <div style={styles.tableHeader}>
+                <div style={styles.tableHeaderCell}>k</div>
+                <div style={styles.tableHeaderCell}>Root (ζ<sup>k</sup>)</div>
+              </div>
+              
+              <div style={styles.tableBody}>
+                {roots.map((root, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      ...styles.tableRow,
+                      borderBottom: i < roots.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none'
+                    }}
+                  >
+                    <div style={styles.tableCell}>{root.k}</div>
+                    <div style={styles.tableCellMono}>{formatComplexNice(root.real, root.imag)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    ReactDOM.render(<RootsOfUnity />, document.getElementById('root'));
+  </script>
+</body>
+</html>
