@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complex Numbers</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Helvetica Neue', 'Hiragino Sans', sans-serif;
+      background: #f7f7f6;
+      color: #2a2a2a;
+      min-height: 100vh;
+    }
+    input[type="text"] {
+      font-family: 'SF Mono', 'Consolas', monospace;
+      font-size: 15px;
+      outline: none;
+      border: none;
+      border-bottom: 1px solid #c0c0c0;
+      background: transparent;
+      padding: 8px 4px;
+      color: #2a2a2a;
+    }
+    input[type="text"]:focus {
+      border-bottom-color: #2a2a2a;
+    }
+    input[type="text"]::placeholder {
+      color: #b0b0b0;
+      font-style: italic;
+    }
+    button {
+      font-family: inherit;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #2a2a2a !important;
+      color: #f7f7f6 !important;
+    }
+    .helper-btn {
+      background: transparent;
+      border: 1px solid #d0d0d0;
+      padding: 4px 10px;
+      font-size: 14px;
+      color: #606060;
+      border-radius: 2px;
+    }
+    .mode-btn {
+      background: transparent;
+      border: 1px solid #c0c0c0;
+      padding: 6px 14px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: #606060;
+    }
+    .mode-btn.active {
+      background: #2a2a2a;
+      color: #f7f7f6;
+      border-color: #2a2a2a;
+    }
+    .error {
+      color: #a05050;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    
+    // Complex number class
+    class Complex {
+      constructor(re, im = 0) {
+        this.re = re;
+        this.im = im;
+      }
+      
+      static fromPolar(r, theta) {
+        return new Complex(r * Math.cos(theta), r * Math.sin(theta));
+      }
+      
+      get r() { return Math.sqrt(this.re * this.re + this.im * this.im); }
+      get theta() { return Math.atan2(this.im, this.re); }
+      
+      add(other) {
+        const o = other instanceof Complex ? other : new Complex(other);
+        return new Complex(this.re + o.re, this.im + o.im);
+      }
+      
+      sub(other) {
+        const o = other instanceof Complex ? other : new Complex(other);
+        return new Complex(this.re - o.re, this.im - o.im);
+      }
+      
+      mul(other) {
+        const o = other instanceof Complex ? other : new Complex(other);
+        return new Complex(
+          this.re * o.re - this.im * o.im,
+          this.re * o.im + this.im * o.re
+        );
+      }
+      
+      div(other) {
+        const o = other instanceof Complex ? other : new Complex(other);
+        const denom = o.re * o.re + o.im * o.im;
+        return new Complex(
+          (this.re * o.re + this.im * o.im) / denom,
+          (this.im * o.re - this.re * o.im) / denom
+        );
+      }
+      
+      pow(n) {
+        // Handle complex exponent via e^(n * ln(z))
+        if (n instanceof Complex) {
+          if (this.re === 0 && this.im === 0) return new Complex(0);
+          const lnZ = new Complex(Math.log(this.r), this.theta);
+          const exp = n.mul(lnZ);
+          return Complex.exp(exp);
+        }
+        // Real integer exponent - use polar form
+        const r = Math.pow(this.r, n);
+        const theta = this.theta * n;
+        return Complex.fromPolar(r, theta);
+      }
+      
+      static exp(z) {
+        const c = z instanceof Complex ? z : new Complex(z);
+        const expRe = Math.exp(c.re);
+        return new Complex(expRe * Math.cos(c.im), expRe * Math.sin(c.im));
+      }
+      
+      static sqrt(z) {
+        const c = z instanceof Complex ? z : new Complex(z);
+        const r = Math.sqrt(c.r);
+        const theta = c.theta / 2;
+        return Complex.fromPolar(r, theta);
+      }
+      
+      static sin(z) {
+        const c = z instanceof Complex ? z : new Complex(z);
+        // sin(z) = (e^(iz) - e^(-iz)) / 2i
+        const iz = new Complex(-c.im, c.re);
+        const niz = new Complex(c.im, -c.re);
+        const eiz = Complex.exp(iz);
+        const eniz = Complex.exp(niz);
+        return eiz.sub(eniz).div(new Complex(0, 2));
+      }
+      
+      static cos(z) {
+        const c = z instanceof Complex ? z : new Complex(z);
+        // cos(z) = (e^(iz) + e^(-iz)) / 2
+        const iz = new Complex(-c.im, c.re);
+        const niz = new Complex(c.im, -c.re);
+        const eiz = Complex.exp(iz);
+        const eniz = Complex.exp(niz);
+        return eiz.add(eniz).div(new Complex(2));
+      }
+      
+      static ln(z) {
+        const c = z instanceof Complex ? z : new Complex(z);
+        return new Complex(Math.log(c.r), c.theta);
+      }
+    }
+    
+    // Tokenizer
+    const tokenize = (expr) => {
+      const tokens = [];
+      let i = 0;
+      const s = expr.replace(/\s+/g, '');
+      
+      while (i < s.length) {
+        const ch = s[i];
+        
+        // Number (including decimals)
+        if (/[0-9.]/.test(ch)) {
+          let num = '';
+          while (i < s.length && /[0-9.]/.test(s[i])) {
+            num += s[i++];
+          }
+          tokens.push({ type: 'num', value: parseFloat(num) });
+          continue;
+        }
+        
+        // Identifier (pi, i, e, sin, cos, sqrt, ln, exp)
+        if (/[a-zA-Zπ]/.test(ch)) {
+          let id = '';
+          while (i < s.length && /[a-zA-Zπ]/.test(s[i])) {
+            id += s[i++];
+          }
+          id = id.toLowerCase();
+          if (id === 'π' || id === 'pi') {
+            tokens.push({ type: 'num', value: Math.PI });
+          } else if (id === 'e' && (i >= s.length || s[i] !== '^')) {
+            // standalone e (Euler's number), not e^
+            tokens.push({ type: 'num', value: Math.E });
+          } else if (id === 'i') {
+            tokens.push({ type: 'i' });
+          } else if (['sin', 'cos', 'sqrt', 'ln', 'exp', 'e'].includes(id)) {
+            tokens.push({ type: 'func', value: id });
+          } else {
+            throw new Error(`Unknown: ${id}`);
+          }
+          continue;
+        }
+        
+        // Operators
+        if ('+-*/^()'.includes(ch)) {
+          tokens.push({ type: ch });
+          i++;
+          continue;
+        }
+        
+        // √ symbol
+        if (ch === '√') {
+          tokens.push({ type: 'func', value: 'sqrt' });
+          i++;
+          continue;
+        }
+        
+        throw new Error(`Unexpected: ${ch}`);
+      }
+      
+      return tokens;
+    };
+    
+    // Recursive descent parser
+    const parseComplex = (expr) => {
+      const tokens = tokenize(expr);
+      let pos = 0;
+      
+      const peek = () => tokens[pos];
+      const consume = (type) => {
+        if (pos < tokens.length && (type === undefined || tokens[pos].type === type)) {
+          return tokens[pos++];
+        }
+        return null;
+      };
+      
+      // Expression = Term (('+' | '-') Term)*
+      const parseExpr = () => {
+        let left = parseTerm();
+        while (peek() && (peek().type === '+' || peek().type === '-')) {
+          const op = consume().type;
+          const right = parseTerm();
+          left = op === '+' ? left.add(right) : left.sub(right);
+        }
+        return left;
+      };
+      
+      // Term = Power (('*' | '/') Power)*
+      const parseTerm = () => {
+        let left = parsePower();
+        while (peek() && (peek().type === '*' || peek().type === '/')) {
+          const op = consume().type;
+          const right = parsePower();
+          left = op === '*' ? left.mul(right) : left.div(right);
+        }
+        return left;
+      };
+      
+      // Power = Unary ('^' Power)?  (right associative)
+      const parsePower = () => {
+        let base = parseUnary();
+        if (peek() && peek().type === '^') {
+          consume('^');
+          const exp = parsePower();
+          return base.pow(exp);
+        }
+        return base;
+      };
+      
+      // Unary = '-' Unary | Atom
+      const parseUnary = () => {
+        if (peek() && peek().type === '-') {
+          consume('-');
+          return parseUnary().mul(new Complex(-1));
+        }
+        if (peek() && peek().type === '+') {
+          consume('+');
+          return parseUnary();
+        }
+        return parseAtom();
+      };
+      
+      // Atom = Number | 'i' | '(' Expr ')' | func '(' Expr ')'
+      // Handle implicit multiplication: 2i, 3pi, 2(1+i)
+      const parseAtom = () => {
+        let result = null;
+        
+        // Function call
+        if (peek() && peek().type === 'func') {
+          const func = consume('func').value;
+          
+          // Handle e^ specially
+          if (func === 'e') {
+            if (peek() && peek().type === '^') {
+              consume('^');
+              const exp = parsePower();
+              return Complex.exp(exp);
+            }
+            return new Complex(Math.E);
+          }
+          
+          // Other functions need parentheses or single value
+          let arg;
+          if (peek() && peek().type === '(') {
+            consume('(');
+            arg = parseExpr();
+            consume(')');
+          } else {
+            arg = parseAtom();
+          }
+          
+          switch (func) {
+            case 'sqrt': return Complex.sqrt(arg);
+            case 'sin': return Complex.sin(arg);
+            case 'cos': return Complex.cos(arg);
+            case 'ln': return Complex.ln(arg);
+            case 'exp': return Complex.exp(arg);
+            default: throw new Error(`Unknown function: ${func}`);
+          }
+        }
+        
+        // Parentheses
+        if (peek() && peek().type === '(') {
+          consume('(');
+          result = parseExpr();
+          consume(')');
+        }
+        // Number
+        else if (peek() && peek().type === 'num') {
+          result = new Complex(consume('num').value);
+        }
+        // i
+        else if (peek() && peek().type === 'i') {
+          consume('i');
+          result = new Complex(0, 1);
+        }
+        else {
+          throw new Error('Expected value');
+        }
+        
+        // Implicit multiplication: check what follows
+        // 2i, 2pi, 2(1+i), (1+i)(2+i), 2sqrt(2)
+        while (peek() && (
+          peek().type === 'i' || 
+          peek().type === 'num' || 
+          peek().type === '(' ||
+          peek().type === 'func'
+        )) {
+          if (peek().type === 'i') {
+            consume('i');
+            result = result.mul(new Complex(0, 1));
+          } else {
+            const next = parseAtom();
+            result = result.mul(next);
+          }
+        }
+        
+        return result;
+      };
+      
+      const result = parseExpr();
+      if (pos < tokens.length) {
+        throw new Error(`Unexpected: ${tokens[pos].type}`);
+      }
+      return result;
+    };
+    
+    // Format number nicely
+    const formatNumber = (n, precision = 6) => {
+      if (isNaN(n)) return '—';
+      
+      const absN = Math.abs(n);
+      const sign = n < 0 ? '−' : '';
+      
+      // Check for zero
+      if (Math.abs(n) < 1e-10) return '0';
+      
+      // Check for integer
+      if (Math.abs(n - Math.round(n)) < 1e-10) {
+        return String(Math.round(n));
+      }
+      
+      // Check multiples of π
+      const piRatio = absN / Math.PI;
+      if (Math.abs(piRatio - Math.round(piRatio)) < 1e-10 && Math.round(piRatio) !== 0) {
+        const k = Math.round(piRatio);
+        return sign + (k === 1 ? 'π' : k + 'π');
+      }
+      
+      // Check fractions of π
+      for (const denom of [2, 3, 4, 6]) {
+        for (let numer = 1; numer < denom * 4; numer++) {
+          const val = (numer * Math.PI) / denom;
+          if (Math.abs(absN - val) < 1e-10) {
+            const num = numer === 1 ? '' : numer;
+            return sign + num + 'π/' + denom;
+          }
+        }
+      }
+      
+      // Check √n
+      for (const base of [2, 3, 5, 6, 7]) {
+        if (Math.abs(absN - Math.sqrt(base)) < 1e-10) {
+          return sign + '√' + base;
+        }
+        if (Math.abs(absN - Math.sqrt(base)/2) < 1e-10) {
+          return sign + '√' + base + '/2';
+        }
+      }
+      
+      // Check simple fractions
+      for (const d of [2, 3, 4, 5, 6, 8]) {
+        for (let num = 1; num < d; num++) {
+          if (Math.abs(absN - num/d) < 1e-10) {
+            return sign + num + '/' + d;
+          }
+        }
+      }
+      
+      const formatted = n.toFixed(precision);
+      return formatted.replace(/\.?0+$/, '');
+    };
+    
+    const ComplexConverter = () => {
+      const svgRef = useRef();
+      const [mode, setMode] = useState('expr'); // 'expr' or 'polar'
+      
+      // Input strings
+      const [inputExpr, setInputExpr] = useState('1+i');
+      const [inputR, setInputR] = useState('');
+      const [inputTheta, setInputTheta] = useState('');
+      const [useDegrees, setUseDegrees] = useState(false);
+      const [error, setError] = useState('');
+      
+      // Computed values
+      const [a, setA] = useState(1);
+      const [b, setB] = useState(1);
+      const [r, setR] = useState(Math.SQRT2);
+      const [theta, setTheta] = useState(Math.PI / 4);
+      
+      // Parse expression input
+      const calculateFromExpr = () => {
+        setError('');
+        try {
+          const z = parseComplex(inputExpr);
+          setA(z.re);
+          setB(z.im);
+          setR(z.r);
+          setTheta(z.theta);
+        } catch (e) {
+          setError(e.message);
+        }
+      };
+      
+      // Parse polar input
+      const calculateFromPolar = () => {
+        setError('');
+        try {
+          const parsedR = parseComplex(inputR);
+          let parsedTheta = parseComplex(inputTheta);
+          
+          if (parsedR.im !== 0 || parsedTheta.im !== 0) {
+            throw new Error('r and θ must be real');
+          }
+          
+          let thetaVal = parsedTheta.re;
+          if (useDegrees) {
+            thetaVal = thetaVal * Math.PI / 180;
+          }
+          
+          const rVal = Math.abs(parsedR.re);
+          setR(rVal);
+          setTheta(thetaVal);
+          setA(rVal * Math.cos(thetaVal));
+          setB(rVal * Math.sin(thetaVal));
+        } catch (e) {
+          setError(e.message);
+        }
+      };
+      
+      const handleKeyDown = (e, calcFn) => {
+        if (e.key === 'Enter') calcFn();
+      };
+      
+      // Initial calculation
+      useEffect(() => {
+        calculateFromExpr();
+      }, []);
+      
+      // D3 visualization
+      useEffect(() => {
+        const svg = d3.select(svgRef.current);
+        const size = 280;
+        const margin = 32;
+        const maxR = 2;
+        const scale = (size - margin * 2) / (maxR * 2);
+        const cx = size / 2;
+        const cy = size / 2;
+        
+        svg.selectAll('*').remove();
+        svg.attr('width', size).attr('height', size);
+        
+        // Grid
+        for (let i = -maxR; i <= maxR; i += 0.5) {
+          const opacity = Number.isInteger(i) ? 0.12 : 0.05;
+          svg.append('line')
+            .attr('x1', margin).attr('x2', size - margin)
+            .attr('y1', cy - i * scale).attr('y2', cy - i * scale)
+            .attr('stroke', '#2a2a2a').attr('stroke-width', 0.5).attr('opacity', opacity);
+          svg.append('line')
+            .attr('x1', cx + i * scale).attr('x2', cx + i * scale)
+            .attr('y1', margin).attr('y2', size - margin)
+            .attr('stroke', '#2a2a2a').attr('stroke-width', 0.5).attr('opacity', opacity);
+        }
+        
+        // Axes
+        svg.append('line')
+          .attr('x1', margin).attr('x2', size - margin)
+          .attr('y1', cy).attr('y2', cy)
+          .attr('stroke', '#2a2a2a').attr('stroke-width', 1);
+        svg.append('line')
+          .attr('x1', cx).attr('x2', cx)
+          .attr('y1', margin).attr('y2', size - margin)
+          .attr('stroke', '#2a2a2a').attr('stroke-width', 1);
+        
+        // Unit circle
+        svg.append('circle')
+          .attr('cx', cx).attr('cy', cy).attr('r', scale)
+          .attr('fill', 'none').attr('stroke', '#2a2a2a')
+          .attr('stroke-width', 0.5).attr('stroke-dasharray', '3,3').attr('opacity', 0.25);
+        
+        // Labels
+        svg.append('text').attr('x', size - margin + 5).attr('y', cy + 4)
+          .attr('fill', '#808080').attr('font-size', '10px').text('Re');
+        svg.append('text').attr('x', cx + 4).attr('y', margin - 5)
+          .attr('fill', '#808080').attr('font-size', '10px').text('Im');
+        
+        // Clamp for display
+        const displayR = Math.min(r, maxR);
+        const displayA = displayR * Math.cos(theta);
+        const displayB = displayR * Math.sin(theta);
+        const px = cx + displayA * scale;
+        const py = cy - displayB * scale;
+        
+        // Projections
+        if (Math.abs(displayA) > 0.01) {
+          svg.append('line')
+            .attr('x1', px).attr('x2', px).attr('y1', cy).attr('y2', py)
+            .attr('stroke', '#2a2a2a').attr('stroke-width', 0.75)
+            .attr('stroke-dasharray', '2,2').attr('opacity', 0.3);
+        }
+        if (Math.abs(displayB) > 0.01) {
+          svg.append('line')
+            .attr('x1', cx).attr('x2', px).attr('y1', py).attr('y2', py)
+            .attr('stroke', '#2a2a2a').attr('stroke-width', 0.75)
+            .attr('stroke-dasharray', '2,2').attr('opacity', 0.3);
+        }
+        
+        // Radius
+        svg.append('line')
+          .attr('x1', cx).attr('x2', px).attr('y1', cy).attr('y2', py)
+          .attr('stroke', '#2a2a2a').attr('stroke-width', 1.5);
+        
+        // Angle arc
+        if (displayR > 0.05) {
+          const arcR = Math.min(scale * 0.2, scale * displayR * 0.35);
+          const arc = d3.arc().innerRadius(0).outerRadius(arcR).startAngle(0).endAngle(-theta);
+          svg.append('path').attr('d', arc()).attr('transform', `translate(${cx},${cy})`)
+            .attr('fill', 'rgba(42,42,42,0.05)').attr('stroke', '#2a2a2a')
+            .attr('stroke-width', 0.5).attr('opacity', 0.5);
+        }
+        
+        // Point
+        svg.append('circle').attr('cx', px).attr('cy', py).attr('r', 5).attr('fill', '#2a2a2a');
+        svg.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 2).attr('fill', '#2a2a2a');
+        
+      }, [a, b, r, theta]);
+
+      const thetaDeg = theta * 180 / Math.PI;
+
+      return (
+        <div style={{ padding: '40px 50px', maxWidth: '950px', margin: '0 auto' }}>
+          {/* Header */}
+          <h1 style={{ fontWeight: 300, fontSize: '26px', marginBottom: '8px', letterSpacing: '2px' }}>
+            複素数
+            <span style={{ fontSize: '11px', marginLeft: '15px', color: '#909090', letterSpacing: '1px' }}>
+              COMPLEX NUMBER CONVERTER
+            </span>
+          </h1>
+          
+          {/* Syntax help */}
+          <div style={{ marginBottom: '35px', fontSize: '12px', color: '#909090' }}>
+            syntax: <code style={{ background: '#eee', padding: '2px 5px' }}>i^3</code>{' '}
+            <code style={{ background: '#eee', padding: '2px 5px' }}>(1+2i)^2</code>{' '}
+            <code style={{ background: '#eee', padding: '2px 5px' }}>e^(i*pi/4)</code>{' '}
+            <code style={{ background: '#eee', padding: '2px 5px' }}>sqrt(i)</code>{' '}
+            <code style={{ background: '#eee', padding: '2px 5px' }}>2pi</code>{' '}
+            <code style={{ background: '#eee', padding: '2px 5px' }}>π/4</code>{' '}
+            <code style={{ background: '#eee', padding: '2px 5px' }}>1/2 + sqrt(3)/2 i</code>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '50px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            {/* Left: Input */}
+            <div style={{ minWidth: '340px', flex: 1 }}>
+              {/* Mode selector */}
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
+                <button 
+                  className={`mode-btn ${mode === 'expr' ? 'active' : ''}`}
+                  onClick={() => setMode('expr')}
+                >
+                  EXPRESSION
+                </button>
+                <button 
+                  className={`mode-btn ${mode === 'polar' ? 'active' : ''}`}
+                  onClick={() => setMode('polar')}
+                >
+                  POLAR (r, θ)
+                </button>
+              </div>
+              
+              {/* Input section */}
+              {mode === 'expr' ? (
+                <div>
+                  <div style={{ fontSize: '11px', letterSpacing: '1px', marginBottom: '12px', color: '#808080' }}>
+                    INPUT COMPLEX EXPRESSION
+                  </div>
+                  <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                      <span style={{ color: '#606060' }}>z</span>
+                      <span style={{ color: '#c0c0c0' }}>=</span>
+                      <input 
+                        type="text"
+                        value={inputExpr}
+                        onChange={e => setInputExpr(e.target.value)}
+                        onKeyDown={e => handleKeyDown(e, calculateFromExpr)}
+                        onBlur={calculateFromExpr}
+                        placeholder="e.g. i^3, (1+i)^2, e^(i*pi)"
+                        style={{ flex: 1, minWidth: '200px' }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: '11px', letterSpacing: '1px', marginBottom: '12px', color: '#808080' }}>
+                    INPUT POLAR COORDINATES
+                  </div>
+                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '12px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: '#606060' }}>r</span>
+                      <span style={{ color: '#c0c0c0' }}>=</span>
+                      <input 
+                        type="text"
+                        value={inputR}
+                        onChange={e => setInputR(e.target.value)}
+                        onKeyDown={e => handleKeyDown(e, calculateFromPolar)}
+                        onBlur={calculateFromPolar}
+                        placeholder="e.g. sqrt(2)"
+                        style={{ width: '130px' }}
+                      />
+                    </label>
+                  </div>
+                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: '#606060' }}>θ</span>
+                      <span style={{ color: '#c0c0c0' }}>=</span>
+                      <input 
+                        type="text"
+                        value={inputTheta}
+                        onChange={e => setInputTheta(e.target.value)}
+                        onKeyDown={e => handleKeyDown(e, calculateFromPolar)}
+                        onBlur={calculateFromPolar}
+                        placeholder="e.g. pi/4"
+                        style={{ width: '130px' }}
+                      />
+                    </label>
+                    <button 
+                      className="helper-btn"
+                      onClick={() => setUseDegrees(!useDegrees)}
+                      style={{ fontSize: '11px' }}
+                    >
+                      {useDegrees ? 'DEG' : 'RAD'}
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {error && <div className="error">{error}</div>}
+              
+              {/* Output section */}
+              <div style={{ marginTop: '35px', padding: '25px', background: '#fff', border: '1px solid #e8e8e8' }}>
+                <div style={{ fontSize: '11px', letterSpacing: '1px', marginBottom: '20px', color: '#808080' }}>
+                  ALL REPRESENTATIONS
+                </div>
+                
+                {/* Rectangular */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '10px', color: '#a0a0a0', marginBottom: '4px' }}>RECTANGULAR</div>
+                  <div style={{ fontSize: '18px', fontFamily: 'Georgia, serif' }}>
+                    <span style={{ color: '#505050' }}>z</span>
+                    <span style={{ color: '#c0c0c0', margin: '0 8px' }}>=</span>
+                    <span>{formatNumber(a)}</span>
+                    <span style={{ margin: '0 4px' }}>{b >= 0 ? '+' : '−'}</span>
+                    <span>{formatNumber(Math.abs(b))}</span>
+                    <span style={{ fontStyle: 'italic' }}>i</span>
+                  </div>
+                </div>
+                
+                {/* Polar */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '10px', color: '#a0a0a0', marginBottom: '4px' }}>POLAR</div>
+                  <div style={{ fontSize: '18px', fontFamily: 'Georgia, serif' }}>
+                    <span style={{ color: '#505050' }}>|z|</span>
+                    <span style={{ color: '#c0c0c0', margin: '0 8px' }}>=</span>
+                    <span>{formatNumber(r)}</span>
+                    <span style={{ margin: '0 15px', color: '#d0d0d0' }}>·</span>
+                    <span style={{ color: '#505050' }}>θ</span>
+                    <span style={{ color: '#c0c0c0', margin: '0 8px' }}>=</span>
+                    <span>{formatNumber(theta)}</span>
+                    <span style={{ fontSize: '13px', color: '#909090', marginLeft: '8px' }}>
+                      ≈ {thetaDeg.toFixed(1)}°
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Exponential */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '10px', color: '#a0a0a0', marginBottom: '4px' }}>EXPONENTIAL</div>
+                  <div style={{ fontSize: '18px', fontFamily: 'Georgia, serif' }}>
+                    <span style={{ color: '#505050' }}>z</span>
+                    <span style={{ color: '#c0c0c0', margin: '0 8px' }}>=</span>
+                    <span>{formatNumber(r)}</span>
+                    <span style={{ margin: '0 2px' }}>·</span>
+                    <span>e</span>
+                    <sup style={{ fontSize: '12px' }}>
+                      <span style={{ fontStyle: 'italic' }}>i</span>
+                      <span style={{ marginLeft: '1px' }}>({formatNumber(theta)})</span>
+                    </sup>
+                  </div>
+                </div>
+                
+                {/* Trigonometric */}
+                <div>
+                  <div style={{ fontSize: '10px', color: '#a0a0a0', marginBottom: '4px' }}>TRIGONOMETRIC</div>
+                  <div style={{ fontSize: '15px', fontFamily: 'Georgia, serif' }}>
+                    <span style={{ color: '#505050' }}>z</span>
+                    <span style={{ color: '#c0c0c0', margin: '0 8px' }}>=</span>
+                    <span>{formatNumber(r)}</span>
+                    <span style={{ color: '#909090' }}>(</span>
+                    <span>cos({formatNumber(theta)})</span>
+                    <span style={{ margin: '0 4px' }}>+</span>
+                    <span style={{ fontStyle: 'italic' }}>i</span>
+                    <span>·sin({formatNumber(theta)})</span>
+                    <span style={{ color: '#909090' }}>)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Right: Visualization */}
+            <div>
+              <svg 
+                ref={svgRef} 
+                style={{ background: '#fff', border: '1px solid #e8e8e8' }}
+              />
+              <div style={{ marginTop: '10px', fontSize: '11px', color: '#a0a0a0' }}>
+                press enter to calculate
+              </div>
+            </div>
+          </div>
+          
+          {/* Footer */}
+          <div style={{ 
+            marginTop: '45px', 
+            paddingTop: '20px', 
+            borderTop: '1px solid #e8e8e8',
+            fontSize: '12px',
+            color: '#909090',
+            fontFamily: 'Georgia, serif',
+            lineHeight: '2'
+          }}>
+            <span style={{ fontStyle: 'italic' }}>r</span> = |<span style={{ fontStyle: 'italic' }}>z</span>| = √(<span style={{ fontStyle: 'italic' }}>a</span>² + <span style={{ fontStyle: 'italic' }}>b</span>²)
+            <span style={{ margin: '0 20px', color: '#d0d0d0' }}>·</span>
+            <span style={{ fontStyle: 'italic' }}>θ</span> = arg(<span style={{ fontStyle: 'italic' }}>z</span>) = atan2(<span style={{ fontStyle: 'italic' }}>b</span>, <span style={{ fontStyle: 'italic' }}>a</span>)
+            <span style={{ margin: '0 20px', color: '#d0d0d0' }}>·</span>
+            e<sup><span style={{ fontStyle: 'italic' }}>iθ</span></sup> = cos<span style={{ fontStyle: 'italic' }}>θ</span> + <span style={{ fontStyle: 'italic' }}>i</span>·sin<span style={{ fontStyle: 'italic' }}>θ</span>
+          </div>
+        </div>
+      );
+    };
+    
+    ReactDOM.render(<ComplexConverter />, document.getElementById('root'));
+  </script>
+</body>
+</html>
