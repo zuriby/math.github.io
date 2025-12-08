@@ -1,4 +1,4 @@
-Math related tools and visualizations
+## Math related tools and visualizations
 
 
 ### [3D-hyperplane-in-4D-space](https://zuriby.github.io/math.github.io/3D-hyperplane-in-4D-space.html)
@@ -11,7 +11,7 @@ Math related tools and visualizations
 
 ### [Complex Function Gallery](https://zuriby.github.io/math.github.io/complex-transformations-demo.html)
 
-### [david-chillag-zl](https://zuriby.github.io/math.github.io/david-chillag-zl.html)
+### [Prof. David Chillag Z"L](https://zuriby.github.io/math.github.io/david-chillag-zl.html)
 
 ### [identity-roots](https://zuriby.github.io/math.github.io/identity-roots.html)
 
@@ -21,8 +21,8 @@ Math related tools and visualizations
 
 ### [matrix rank vis](https://zuriby.github.io/math.github.io/la-visualizer.html)
 
-### [lc-pt](https://zuriby.github.io/math.github.io/lc-pt.html)
+### [Every element is a weighted sum of three basis vectors](https://zuriby.github.io/math.github.io/lc-pt.html)
 
-### [quaternion-rotation](https://zuriby.github.io/math.github.io/quaternion-rotation.html)
+### [Quaternion Rotation](https://zuriby.github.io/math.github.io/quaternion-rotation.html)
 
-### [transformation-visualizer](https://zuriby.github.io/math.github.io/transformation-visualizer.html)
+### [Ax=b Lab](https://zuriby.github.io/math.github.io/transformation-visualizer.html)
