@@ -13,13 +13,13 @@
 
 ### [Prof. David Chillag Z"L](https://zuriby.github.io/math.github.io/david-chillag-zl.html)
 
-### [identity-roots](https://zuriby.github.io/math.github.io/identity-roots.html)
+### [Identity Roots](https://zuriby.github.io/math.github.io/identity-roots.html)
 
-### [equation editor](https://zuriby.github.io/math.github.io/index.html)
+### [Equation editor](https://zuriby.github.io/math.github.io/eq-editor.html)
 
-### [lines intersect](https://zuriby.github.io/math.github.io/la-2.3.7.html)
+### [Lines intersect](https://zuriby.github.io/math.github.io/la-2.3.7.html)
 
-### [matrix rank vis](https://zuriby.github.io/math.github.io/la-visualizer.html)
+### [Matrix rank vis](https://zuriby.github.io/math.github.io/la-visualizer.html)
 
 ### [Every element is a weighted sum of three basis vectors](https://zuriby.github.io/math.github.io/lc-pt.html)
 
