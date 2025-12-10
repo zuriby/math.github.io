@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Number That Turned Sideways</title>
+    
+    <!-- KaTeX for LaTeX rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:wght@300;400;600&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-primary: #f8f5f0;
+            --bg-secondary: #eee9e0;
+            --text-primary: #2c2c2c;
+            --text-secondary: #5a5a5a;
+            --accent-blue: #2b5a8a;
+            --accent-red: #8a3a3a;
+            --accent-gold: #8a6a2b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Serif Pro', Georgia, serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.8;
+            font-size: 18px;
+        }
+
+        .content {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 4rem 2rem 5rem;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.2rem, 5vw, 3rem);
+            font-weight: 400;
+            margin-bottom: 2rem;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.6rem;
+            font-weight: 400;
+            color: var(--accent-blue);
+            margin-top: 2.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        h3 {
+            font-family: 'Source Sans Pro', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1.25rem;
+        }
+
+        hr {
+            border: none;
+            text-align: center;
+            margin: 2.5rem 0;
+        }
+
+        hr::before {
+            content: '* * *';
+            color: var(--text-secondary);
+            letter-spacing: 0.5em;
+        }
+
+        ul {
+            margin: 1.25rem 0;
+            padding-left: 1.5rem;
+        }
+
+        ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        em {
+            font-style: italic;
+        }
+
+        strong {
+            font-weight: 600;
+        }
+
+        .katex-display {
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .katex {
+            font-size: 1.1em;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                font-size: 16px;
+            }
+            
+            .content {
+                padding: 2.5rem 1.25rem 4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <article class="content">
+        <h1>The Number That Turned Sideways</h1>
+
+<p>A complex number comes in pairs: $a + bi$, where $a$ and $b$ are real numbers and $i$ is the square root of negative one.</p>
+<p>The magnitude is</p>
+
+$$|z| = \sqrt{a^2 + b^2}$$
+
+<p>Given the magnitude and an angle $\theta$, you can reconstruct the number:</p>
+
+$$z = |z|(\cos\theta + i\sin\theta)$$
+
+<p>These numbers are two-dimensional, like fractions — defined by two pieces of information. They live on a plane: the horizontal axis for the real part, the vertical axis for the imaginary. Every complex number is a point; every point is a complex number.</p>
+
+<p>Multiply a complex number by a real scalar — say, $7 \times (2 + 3i) = 14 + 21i$ — and the magnitude changes. The number stretches or shrinks along its direction.</p>
+
+<p>But put $i$ in the exponent, and something else happens:</p>
+<ul>
+    <li>Raise a number to the power of $i$, and it rotates.</li>
+    <li>$i$ itself rotates $\frac{\pi}{2}$.</li>
+    <li>Multiply by $i$ twice — that's $i^2 = -1$ — and you've rotated a full $\pi$.</li>
+    <li>Three times, $\frac{3\pi}{2}$.</li>
+    <li>Four times, back to where you started: a complete circle.</li>
+</ul>
+<p>It doesn't have to be $i \times i$; it can be $e^{i\pi}$ or $3^{2i}$. For some mysterious reason, when $i$ appears in the <i>exponent</i>, the number <i>rotates</i>.</p>
+
+<p>This is what the textbooks teach. This is what earns students high marks.</p>
+
+<p>And yet: <em>why</em> does the exponent rotate? Who decided $\sqrt{-1}$ belongs on a vertical axis? What does the exponential function — the function of growth and decay — have to do with circles?</p>
+
+<hr>
+
+<p>This wasn't one genius with a complete vision. It was a relay race across three centuries.</p>
+
+<p>The race begins in 1572, when an Italian mathematician named Rafael Bombelli defined the arithmetic rules that make $i$ behave the way it does. He built the <em>engine</em>.</p>
+
+<p>In 1748, Leonhard Euler fed that engine into his infinite series — what we now call the Taylor expansion of $e^x$ — and discovered that growth and oscillation were the same thing in disguise.</p>
+
+<p>And between 1799 and 1831, three men — a Norwegian surveyor, a Parisian bookkeeper, and the prince of mathematicians — finally drew the picture. They gave $i$ a <em>home</em>.</p>
+
+<p>The progression was: <strong>arithmetic rules</strong>, then <strong>analytic connection</strong>, then <strong>geometric meaning</strong>.</p>
+
+<p>To understand why imaginary exponents rotate, we have to trace this path from the beginning.</p>
+
+<hr>
+
+<h2>1572: The Engine</h2>
+
+<p>Before Bombelli, mathematicians had stumbled upon $\sqrt{-1}$ while solving cubic equations, and they were scared of it. Gerolamo Cardano, who published the general solution to the cubic in 1545, called these quantities "sophistic" and "as subtle as they are useless." They seemed to break mathematics.</p>
+
+<p>Bombelli was the one who said: <em>What if we stop treating these as errors, and start treating them as numbers with their own rules?</em></p>
+
+<h3>The Discovery: Page 169</h3>
+
+<p>In his 1572 masterpiece, <em>L'Algebra</em>, we find the exact moment this engine was switched on. On <strong>Page 169</strong>, Bombelli writes a hesitation, an apology to the reader:</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+    <img src="Lalgebra_opera_di_Rafael_Bombelli-p169.png" alt="Page 169 of L'Algebra showing the rules of complex multiplication" style="max-width: 100%; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <figcaption style="font-size: 0.9rem; color: #5a5a5a; margin-top: 0.5rem; font-style: italic;">
+        Page 169: The birth of the cycle. The bottom list defines the rules for "Più di meno" ($+i$).
+        <br/>
+        Courtesy of The Linda Hall Library of Science, Engineering & Technology
+    </figcaption>
+</figure>
+
+<blockquote>
+    "la quale parerà à molti più tosto sofistica, che reale..."<br>
+    <em>(...which will seem to many more 'sophistic' [fake/tricky] than real...)</em>
+</blockquote>
+
+<p>He knew it looked crazy. But he proceeded anyway, defining the multiplication rules in a list that reads almost like a poem. He didn't use the symbol $i$ yet; instead, he used:</p>
+<ul>
+    <li><strong><em>più di meno</em></strong> ("plus of minus") for $+i$</li>
+    <li><strong><em>meno di meno</em></strong> ("minus of minus") for $-i$</li>
+</ul>
+
+<p>Here is the translation of the table he wrote on that page:</p>
+
+<div style="background: #f0f0f0; padding: 1.5rem; border-left: 4px solid #8a3a3a; margin: 1.5rem 0;">
+    <p><strong>Più via più di meno, fa più di meno.</strong><br>
+    ($+1 \times i = i$) — <em>Scaling</em></p>
+
+    <p><strong>Meno via più di meno, fa meno di meno.</strong><br>
+    ($-1 \times i = -i$) — <em>Scaling</em></p>
+
+    <p><strong>Più di meno via più di meno, fa meno.</strong><br>
+    ($i \times i = -1$) — <em>The Rotation!</em></p>
+
+    <p><strong>Più di meno via men di meno, fa più.</strong><br>
+    ($i \times -i = 1$) — <em>Completing the Cycle</em></p>
+</div>
+
+<h3>The Context: The Jungle of Roots</h3>
+
+<p>To understand the magnitude of Bombelli's achievement, we must look at the environment he was working in. He wasn't just solving one simple equation; he was building an infrastructure to handle an entire class of algebraic monsters.</p>
+
+<p>A Table of Contents entry from the same period reveals he was teaching readers how to perform calculations with "linked roots" (nested radicals like $\sqrt[3]{2+\sqrt{-121}}$). Look at the entries for division:</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+    <img src="Lalgebra_opera_di_Rafael_Bombelli-tavola.png" alt="Table of Contents from L'Algebra showing operations with linked roots" style="max-width: 100%; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <figcaption style="font-size: 0.9rem; color: #5a5a5a; margin-top: 0.5rem; font-style: italic;">
+        The Table of Contents (a c. 167): "A partire per un Trinomio..." (To divide by a Trinomial of linked roots).
+        <br/>
+        Courtesy of The Linda Hall Library of Science, Engineering & Technology
+    </figcaption>
+</figure>
+
+<blockquote>
+    "A partire per un Trinomio compoſto di Radici cube legate, e numero"<br>
+    <em>(To <strong>divide</strong> by a Trinomial <strong>composed</strong> of <strong>linked cubic roots</strong> and a number)</em>
+</blockquote>
+
+<p>He even has entries for summing "linked cubic roots of plus of minus" (<em>Radici cube legate di più di meno</em>). To survive in this jungle, he needed a robust arithmetic engine. The multiplication cycle ($i \times i = -1$) was his machete.</p>
+
+<h3>The Proof: Slaying the Cubic</h3>
+
+<p>Now we can watch him use this engine to slay the specific monster that started it all: the cubic equation.</p>
+
+$$x^3 = 15x + 4$$
+
+<p>Cardano's formula gave an answer involving the square root of a negative:</p>
+$$x = \sqrt[3]{2 + 11i} + \sqrt[3]{2 - 11i}$$
+
+<p>This looked impossible. Yet Bombelli knew that $x=4$ was a valid answer ($4^3 = 64$ and $15(4)+4 = 64$). He guessed that the cube roots were themselves complex numbers. He set $\sqrt[3]{2 + 11i} = (a + bi)$.</p>
+
+<p>By applying the rules from Page 169—specifically that <strong>Più di meno via più di meno, fa meno</strong> ($i^2 = -1$)—he was able to expand the cube:</p>
+
+$$(a + bi)^3 = a^3 + 3a^2(bi) + 3a(bi)^2 + (bi)^3$$
+$$= a^3 + 3a^2bi - 3ab^2 - b^3i$$
+$$= (a^3 - 3ab^2) + (3a^2b - b^3)i$$
+
+<p>He matched the real part to 2 and the imaginary part to 11. Solving this system, he found that $a=2$ and $b=1$. This meant:</p>
+$$\sqrt[3]{2 + 11i} = 2 + i$$
+$$\sqrt[3]{2 - 11i} = 2 - i$$
+
+<p>And then, the magic trick. When he added them together to find $x$, the imaginary parts canceled out perfectly:</p>
+
+$$x = (2 + i) + (2 - i) = 4$$
+
+<p>This is why Page 169 exists. Without those multiplication rules, Bombelli couldn't show that the "impossible" math led to the correct real answer. The engine was built because the cubic demanded it.</p>
+
+<hr>
+
+<h2>1748: The Growth Machine</h2>
+
+<p>For 176 years, the engine sat there. Mathematicians used it — these "imaginary" numbers kept appearing in calculations, kept giving correct answers — but nobody believed they were <em>real</em>. They were homeless: useful but philosophically embarrassing.</p>
+
+<p>Then came Euler.</p>
+
+<h3>1. The Setup: The "DNA" of Functions</h3>
+
+<p>Leonhard Euler was the master of infinite series. He realized that functions like $e^x$, $\sin(x)$, and $\cos(x)$ weren't just curves on a graph; they were infinite sums of polynomials. He viewed this as their true "DNA."</p>
+
+<p>He had three definitions sitting on his desk. Two of them came from <strong>Isaac Newton</strong>, who had discovered decades earlier that the geometry of circles could be written as algebra:</p>
+
+<p><strong>Newton's Cosine Series ($\cos x$):</strong></p>
+$$\cos x = 1 - \frac{x^2}{2!} + \frac{x^4}{4!} - \frac{x^6}{6!} + \dots$$
+<p><em>Notice: It uses only <strong>even</strong> powers ($0, 2, 4\dots$) and the signs <strong>alternate</strong>.</em></p>
+
+<p><strong>Newton's Sine Series ($\sin x$):</strong></p>
+$$\sin x = x - \frac{x^3}{3!} + \frac{x^5}{5!} - \frac{x^7}{7!} + \dots$$
+<p><em>Notice: It uses only <strong>odd</strong> powers ($1, 3, 5\dots$) and the signs <strong>alternate</strong>.</em></p>
+
+<p>But the third definition was Euler's own pride and joy. He had defined the number $e$ (the base of natural logarithms) and its exponential growth series:</p>
+
+<p><strong>Euler's Growth Machine ($e^x$):</strong></p>
+$$e^x = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \frac{x^4}{4!} + \frac{x^5}{5!} + \dots$$
+<p><em>Notice: It uses <strong>every</strong> power, and all signs are <strong>positive</strong>.</em></p>
+
+<h3>2. The Source: Page 102</h3>
+
+<p>In his landmark <em>Introductio in analysin infinitorum</em> (1748), Euler performed the alchemy that connected these worlds. We can see the result on Page 102 of this French translation:</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+    <img src="Introduction-a-l'analyse infinitesimale-euler-p102.png" alt="Euler's derivation connecting exponentials to trigonometry" style="max-width: 100%; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <figcaption style="font-size: 0.9rem; color: #5a5a5a; margin-top: 0.5rem; font-style: italic;">
+        Page 102: Euler writes $e^{+v\sqrt{-1}} = \cos v + \sqrt{-1}\sin v$. Note that he uses $i$ to mean "infinity" (<em>i un nombre infiniment grand</em>) — the modern notation $i = \sqrt{-1}$ had not yet been established.
+    </figcaption>
+</figure>
+
+<p>Look at the bottom of the page. There it is, in his own hand:</p>
+
+$$e^{+v\sqrt{-1}} = \cos v + \sqrt{-1}\sin v$$
+
+<p>He writes out $\sqrt{-1}$ every single time — awkward, but unmistakable. The connection between exponential and trigonometric functions, forced by pure algebra.</p>
+
+<h3>3. The "Crunching" (The Alchemy)</h3>
+
+<p>How did he get there? Euler asked a fearless question: <em>"What happens if I plug $(ix)$ into my Growth Machine?"</em></p>
+
+<p>He wasn't trying to draw a circle. He was just manipulating symbols. Let's follow his steps:</p>
+
+$$e^{ix} = 1 + (ix) + \frac{(ix)^2}{2!} + \frac{(ix)^3}{3!} + \frac{(ix)^4}{4!} + \frac{(ix)^5}{5!} + \dots$$
+
+<p>Now apply Bombelli's engine — the cycle that $i^2 = -1$, $i^3 = -i$, $i^4 = 1$:</p>
+
+$$e^{ix} = 1 + ix - \frac{x^2}{2!} - \frac{ix^3}{3!} + \frac{x^4}{4!} + \frac{ix^5}{5!} - \dots$$
+
+<h3>4. The Separation (The Discovery)</h3>
+
+<p>Euler looked at this jumbled mess and realized he could sort the terms into two piles: those <strong>without</strong> $i$ and those <strong>with</strong> $i$.</p>
+
+<p><strong>Pile 1 (No $i$):</strong></p>
+$$1 - \frac{x^2}{2!} + \frac{x^4}{4!} - \dots$$
+<p><em>Euler looks at his notes: "Wait, that is exactly Newton's series for <strong>Cosine</strong>!"</em></p>
+
+<p><strong>Pile 2 (The $i$ terms):</strong></p>
+$$i(x - \frac{x^3}{3!} + \frac{x^5}{5!} - \dots)$$
+<p><em>Euler looks at his notes: "And that is exactly Newton's series for <strong>Sine</strong>!"</em></p>
+
+<h3>5. The Conclusion</h3>
+
+<p>So, purely by trusting the algebra of infinite series, Euler proved:</p>
+$$e^{ix} = \text{Pile 1} + \text{Pile 2}$$
+$$e^{ix} = \cos(x) + i\sin(x)$$
+
+<p>The algebra <em>forced</em> this conclusion. Euler didn't need geometry to see it was true. The cyclic nature of $i$ — the engine Bombelli built — acts as a <em>filter</em>. When you feed $i$ into the exponential function, its four-step cycle breaks the Growth Machine apart, separating the even terms into Cosine and the odd terms into Sine.</p>
+
+<p>The algebra screamed it. The geometric interpretation — the circle — was just the inevitable shadow cast by this algebraic reality.</p>
+
+<hr>
+
+<h2>1799–1831: The Picture</h2>
+
+<p>For fifty years after Euler's formula, mathematicians had the equation without the picture.</p>
+
+<p>They could compute $e^{i\pi} = -1$. They knew it was true. But they didn't <em>see</em> it as rotation.</p>
+
+<p>Then, at the turn of the nineteenth century, three men — working largely independently — finally drew the plane.</p>
+
+<p><strong>Caspar Wessel</strong> (1799) was a Norwegian surveyor. His job was to calculate coordinates, directions, distances. He realized that if real numbers are a horizontal line, then these "impossible" numbers could be the space <em>off</em> the line — a vertical axis. Multiplication by $i$ wasn't mysterious; it was a quarter-turn.</p>
+
+<p><strong>Jean-Robert Argand</strong> (1806) was a Parisian bookkeeper with no formal mathematical training. In 1806, Argand self-published a small pamphlet, within, he drew what no one had dared to draw before: he took the number line (where KA is $+1$ and KI is $-1$) and placed the imaginary numbers perpendicular to it.</p>
+
+<figure style="margin: 2rem 0; text-align: center;">
+    <img src="essaisurunemani00argauoft.png" alt="Argand's 1806 diagram showing imaginary numbers as a vertical axis" style="max-width: 100%; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <figcaption style="font-size: 0.9rem; color: #5a5a5a; margin-top: 0.5rem; font-style: italic;">
+        Argand's 1806 diagram. He sets KA as $+1$ and KI as $-1$. He then reasons that $\sqrt{-1}$ must be the "mean proportional" between them—Point E, rotated exactly 90 degrees.
+    </figcaption>
+</figure>
+
+<p>Argand reasoned that if multiplying by $-1$ is a 180° turn (from A to I), then multiplying by $\sqrt{-1}$ must be a 90° turn (from A to E). The "homeless" number finally had an address.</p>
+
+
+<p><strong>Carl Friedrich Gauss</strong> (1831) was the prince of mathematicians, and when he endorsed the geometric interpretation, the mathematical world finally listened. He coined the term "complex numbers" and proved the Fundamental Theorem of Algebra: every polynomial equation has roots in this system. The complex numbers weren't a trick — they were <em>necessary</em>. They completed algebra.</p>
+
+<hr>
+
+<h2>What It All Means</h2>
+
+<p>Start with a number on the real line. Multiply by $-1$, and you flip it: a rotation of $\pi$, a half-turn.</p>
+
+<p>Now ask: is there a number that, multiplied twice, gives $-1$? A "half-flip"?</p>
+
+<p>If flipping is $\pi$, then half a flip is $\frac{\pi}{2}$. The square root of $-1$ isn't a mystery — it's a quarter-turn. It has to live <em>off the line</em>, perpendicular to it.</p>
+
+<p>The cycle Bombelli defined — $1, i, -1, -i, 1$ — is the same as the cycle of quarter-turns around a circle. He encoded rotation 176 years before anyone drew the picture.</p>
+
+<p>Euler's formula says that $e^{i\theta}$ traces the unit circle as $\theta$ varies. Plug in $\theta = \pi$:</p>
+
+$$e^{i\pi} = \cos(\pi) + i\sin(\pi) = -1 + 0i = -1$$
+
+<p>The growth constant, the imaginary unit, the ratio of circumference to diameter, and negative unity — bound together because the exponential, when fed imaginary numbers, <em>is</em> circular motion.</p>
+
+<p>Why does $e$ produce circles? Because its Taylor series contains both sine and cosine, interleaved and hidden. The cyclic powers of $i$ act as a filter, separating what was always there.</p>
+
+<hr>
+
+<p>Three centuries. Three stages.</p>
+
+<p><strong>1572</strong>: Bombelli defines the arithmetic. He builds the engine without knowing what it will power.</p>
+
+<p><strong>1748</strong>: Euler connects the engine to the Growth Machine. The algebra reveals that exponential and trigonometric functions are the same object, seen from different angles.</p>
+
+<p><strong>1799–1831</strong>: Wessel, Argand, and Gauss draw the plane. The homeless number finds a home.</p>
+
+<p>Arithmetic rules. Analytic connection. Geometric meaning.</p>
+
+<p>And a number that turned sideways, and changed everything.</p>
+
+
+
+<hr>
+
+<h2>Sources</h2>
+
+<p style="margin-bottom: 1rem; padding-left: 2rem; text-indent: -2rem;">
+    Argand, Jean-Robert. <em>Essai sur une manière de représenter les quantités imaginaires dans les constructions géométriques</em>. Paris, 1806. Internet Archive. <a href="https://ia800807.us.archive.org/8/items/essaisurunemani00argauoft/essaisurunemani00argauoft.pdf" target="_blank">https://archive.org/details/essaisurunemani00argauoft</a>
+</p>
+
+<p style="margin-bottom: 1rem; padding-left: 2rem; text-indent: -2rem;">
+    Bombelli, Rafael. <em>L'algebra: opera di Rafael Bombelli da Bologna</em>. Bologna: Giovanni Rossi, 1572. Linda Hall Library of Science, Engineering & Technology. <a href="https://catalog.lindahall.org/discovery/delivery/01LINDAHALL_INST:LHL/1287366550005961" target="_blank">https://catalog.lindahall.org/discovery/delivery/01LINDAHALL_INST:LHL/1287366550005961</a>
+</p>
+
+<p style="margin-bottom: 1rem; padding-left: 2rem; text-indent: -2rem;">
+    Euler, Leonhard. <em>Introduction a l'analyse infinitésimale</em>. Translated by J. B. Labey. Paris: Barrois, 1796. Originally published as <em>Introductio in analysin infinitorum</em>, Lausanne, 1748. Linda Hall Library of Science, Engineering & Technology. <a href="https://catalog.lindahall.org/discovery/delivery/01LINDAHALL_INST:LHL/1287124950005961" target="_blank">https://catalog.lindahall.org/discovery/delivery/01LINDAHALL_INST:LHL/1287124950005961</a>
+</p>
+
+<hr>
+
+<figure style="margin: 2rem 0; text-align: center;">
+    <img src="chillag-de-moivor.png" alt="Professor David Chillag" style="max-width: 100%; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <figcaption style="font-size: 0.9rem; color: #5a5a5a; margin-top: 0.5rem; font-style: italic;">
+        In memory of Professor David Chillag Z"L. I follow the path illuminated by the torch he left behind.
+    </figcaption>
+</figure>
+
+    </article>
+
+</body>
+</html>
