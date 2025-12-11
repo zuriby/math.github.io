@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Number That Turned Sideways</title>
     
-    <!-- KaTeX for LaTeX rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
@@ -17,7 +16,6 @@
             throwOnError: false
         });"></script>
     
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:wght@300;400;600&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
     
     <style>
@@ -353,6 +351,28 @@ $$e^{ix} = \cos(x) + i\sin(x)$$
 
 <p>The algebra screamed it. The geometric interpretation — the circle — was just the inevitable shadow cast by this algebraic reality.</p>
 
+<h3>6. The Second Fruit: Dividing the Circle</h3>
+
+<p>Euler’s formula didn’t just connect exponential growth to circular motion. It also revealed how the circle <em>divides</em>.</p>
+
+<p>Consider the equation $z^n = 1$. In the real numbers, this is messy ($x^3=1$ has one solution, $x^4=1$ has two). But Euler’s machine offers a constructive solution. It asks: "Which angles, when you rotate by them $n$ times, return you to the start?"</p>
+
+<p>The answer flows directly from the exponent:</p>
+
+$$\zeta_k = e^{i \frac{2\pi k}{n}}$$
+
+<p>For $k=0, 1, \dots, n-1$, these are points perfectly spaced around the unit circle. Euler didn't need to "find" these roots; he <em>built</em> them. The Roots of Unity are the direct offspring of his Growth Machine.</p>
+
+<p>Bombelli’s original cycle — $1, i, -1, -i, 1$ — was precisely this logic applied to the case $n=4$. He had discovered the pattern without knowing it was part of an infinite family.</p>
+
+<p>And since a polynomial of degree $n$ can have at most $n$ roots — a basic fact of algebra — these constructed roots must be <em>all</em> of them.</p>
+
+<p>Euler could even prove, using pure series algebra, that these $n$ numbers sum to exactly zero:</p>
+
+$$1 + \zeta + \zeta^2 + \dots + \zeta^{n-1} = \frac{1 - \zeta^n}{1 - \zeta} = \frac{1 - 1}{1 - \zeta} = 0$$
+
+<p>Long before the geometric plane was drawn, Euler knew that these numbers formed a perfect, balanced system. He had the symmetry; he was just waiting for the picture.</p>
+
 <hr>
 
 <h2>1799–1831: The Picture</h2>
@@ -376,8 +396,19 @@ $$e^{ix} = \cos(x) + i\sin(x)$$
 
 <p>Argand reasoned that if multiplying by $-1$ is a 180° turn (from A to I), then multiplying by $\sqrt{-1}$ must be a 90° turn (from A to E). The "homeless" number finally had an address.</p>
 
+<h3>The Closure: No Holes Left</h3>
 
-<p><strong>Carl Friedrich Gauss</strong> (1831) was the prince of mathematicians, and when he endorsed the geometric interpretation, the mathematical world finally listened. He coined the term "complex numbers" and proved the Fundamental Theorem of Algebra: every polynomial equation has roots in this system. The complex numbers weren't a trick — they were <em>necessary</em>. They completed algebra.</p>
+<p>If Euler gave us the roots of unity, what was left for Gauss?</p>
+
+<p>Euler could construct solutions for clean equations like $z^n = 1$. But what about the ugly ones? What about $x^5 - 3x + 2 = 0$?</p>
+
+<p>This is where <strong>Carl Friedrich Gauss</strong> stepped in. In 1799, he proved the <strong>Fundamental Theorem of Algebra</strong>.</p>
+
+<p>His proof wasn't about building roots (which is often impossible for messy polynomials). It was topological. He viewed the polynomial as a continuous mapping of the complex plane. He reasoned that the complex plane has "no holes"—it is topologically complete. Therefore, any continuous polynomial function <em>must</em> cross zero somewhere.</p>
+
+<p>Later, in 1831, he gave the geometric interpretation his immense authority, coining the term "complex numbers."</p>
+
+<p><strong>Euler built the perfect roots. Gauss proved there were no missing roots.</strong> Together, they established that the complex number system is algebraically closed. The story was finished. The complex numbers weren't a trick — they were <em>necessary</em>. They completed algebra.</p>
 
 <hr>
 
@@ -412,8 +443,6 @@ $$e^{i\pi} = \cos(\pi) + i\sin(\pi) = -1 + 0i = -1$$
 <p>Arithmetic rules. Analytic connection. Geometric meaning.</p>
 
 <p>And a number that turned sideways, and changed everything.</p>
-
-
 
 <hr>
 
