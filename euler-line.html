@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Euler Line Construction</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0f14;
+            --bg-grid: #111820;
+            --grid-line: #1a2530;
+            --grid-line-major: #243040;
+            --text-primary: #e8ece8;
+            --text-secondary: #7a8a8a;
+            --accent-blue: #4a9eff;
+            --accent-gold: #ffd866;
+            --accent-coral: #ff6b6b;
+            --accent-green: #7bed9f;
+            --accent-purple: #a78bfa;
+            --triangle-stroke: #e8ece8;
+            --median-color: #4a9eff;
+            --perp-bisector-color: #7bed9f;
+            --altitude-color: #ff6b6b;
+            --euler-line-color: #ffd866;
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: 'IBM Plex Mono', monospace;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #0d1318 0%, #0a0f14 100%);
+            border-right: 1px solid var(--grid-line-major);
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            overflow-y: auto;
+        }
+
+        .title {
+            font-family: 'Source Serif 4', serif;
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .step-btn {
+            background: transparent;
+            border: 1px solid var(--grid-line-major);
+            color: var(--text-secondary);
+            padding: 14px 16px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .step-btn:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-primary);
+        }
+
+        .step-btn.active {
+            border-color: var(--accent-gold);
+            color: var(--text-primary);
+            background: rgba(255, 216, 102, 0.05);
+        }
+
+        .step-btn.completed {
+            border-color: var(--grid-line-major);
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .step-indicator {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .step-btn.active .step-indicator {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+            color: var(--bg-dark);
+        }
+
+        .step-btn.completed .step-indicator {
+            background: var(--text-secondary);
+            border-color: var(--text-secondary);
+            color: var(--bg-dark);
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .step-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--grid-line-major);
+            padding: 16px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .info-panel h3 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--accent-gold);
+        }
+
+        .info-panel p {
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .info-panel .highlight {
+            color: var(--text-primary);
+        }
+
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 11px;
+        }
+
+        .legend-line {
+            width: 24px;
+            height: 2px;
+        }
+
+        .legend-point {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: var(--bg-grid);
+            overflow: hidden;
+        }
+
+        #gridCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #mainCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        .coordinates-display {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(10, 15, 20, 0.9);
+            border: 1px solid var(--grid-line-major);
+            padding: 12px 16px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .coord-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 4px;
+        }
+
+        .coord-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .coord-label {
+            color: var(--text-primary);
+        }
+
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(10, 15, 20, 0.9);
+            border: 1px solid var(--grid-line-major);
+            padding: 12px 16px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            max-width: 240px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .control-btn {
+            flex: 1;
+            background: transparent;
+            border: 1px solid var(--grid-line-major);
+            color: var(--text-secondary);
+            padding: 12px;
+            cursor: pointer;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            border-color: var(--text-primary);
+            color: var(--text-primary);
+        }
+
+        .control-btn.primary {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+            color: var(--bg-dark);
+            font-weight: 500;
+        }
+
+        .control-btn.primary:hover {
+            background: #ffe599;
+            border-color: #ffe599;
+        }
+
+        .ratio-display {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(255, 216, 102, 0.08);
+            border: 1px solid rgba(255, 216, 102, 0.2);
+            font-size: 12px;
+        }
+
+        .ratio-display .formula {
+            font-family: 'Source Serif 4', serif;
+            font-size: 16px;
+            color: var(--accent-gold);
+            text-align: center;
+            margin: 8px 0;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--grid-line-major);
+                max-height: 40vh;
+            }
+            
+            .canvas-container {
+                min-height: 60vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div>
+                <h1 class="title">Euler Line</h1>
+                <p class="subtitle">Interactive Construction</p>
+            </div>
+
+            <div class="steps-container">
+                <button class="step-btn active" data-step="0">
+                    <span class="step-indicator">0</span>
+                    <div class="step-content">
+                        <div class="step-title">Triangle</div>
+                        <div class="step-desc">Drag vertices A, B, C</div>
+                    </div>
+                </button>
+                <button class="step-btn" data-step="1">
+                    <span class="step-indicator">1</span>
+                    <div class="step-content">
+                        <div class="step-title">Centroid G</div>
+                        <div class="step-desc">Intersection of medians</div>
+                    </div>
+                </button>
+                <button class="step-btn" data-step="2">
+                    <span class="step-indicator">2</span>
+                    <div class="step-content">
+                        <div class="step-title">Circumcenter O</div>
+                        <div class="step-desc">Intersection of ⊥ bisectors</div>
+                    </div>
+                </button>
+                <button class="step-btn" data-step="3">
+                    <span class="step-indicator">3</span>
+                    <div class="step-content">
+                        <div class="step-title">Orthocenter H</div>
+                        <div class="step-desc">Intersection of altitudes</div>
+                    </div>
+                </button>
+                <button class="step-btn" data-step="4">
+                    <span class="step-indicator">4</span>
+                    <div class="step-content">
+                        <div class="step-title">Euler Line</div>
+                        <div class="step-desc">O, G, H are collinear</div>
+                    </div>
+                </button>
+            </div>
+
+            <div class="info-panel" id="infoPanel">
+                <h3>The Triangle</h3>
+                <p>Drag the vertices <span class="highlight">A</span>, <span class="highlight">B</span>, <span class="highlight">C</span> to reshape the triangle.</p>
+                <p>Click the steps above to construct the Euler Line piece by piece.</p>
+            </div>
+
+            <div class="legend" id="legend">
+                <div class="legend-item">
+                    <span class="legend-line" style="background: var(--triangle-stroke)"></span>
+                    <span>Triangle</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="control-btn" id="prevBtn">← Prev</button>
+                <button class="control-btn primary" id="nextBtn">Next →</button>
+            </div>
+        </aside>
+
+        <div class="canvas-container">
+            <canvas id="gridCanvas"></canvas>
+            <canvas id="mainCanvas"></canvas>
+            <div class="instructions">
+                <strong>Drag vertices</strong> to reshape the triangle.<br>
+                Use sidebar steps to build the Euler Line.
+            </div>
+            <div class="coordinates-display" id="coordsDisplay">
+                <div class="coord-row"><span class="coord-label">A:</span><span id="coordA">(0, 0)</span></div>
+                <div class="coord-row"><span class="coord-label">B:</span><span id="coordB">(0, 0)</span></div>
+                <div class="coord-row"><span class="coord-label">C:</span><span id="coordC">(0, 0)</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Canvas setup
+        const gridCanvas = document.getElementById('gridCanvas');
+        const mainCanvas = document.getElementById('mainCanvas');
+        const gridCtx = gridCanvas.getContext('2d');
+        const ctx = mainCanvas.getContext('2d');
+
+        // Colors
+        const colors = {
+            grid: '#1a2530',
+            gridMajor: '#243040',
+            triangle: '#e8ece8',
+            median: '#4a9eff',
+            perpBisector: '#7bed9f',
+            altitude: '#ff6b6b',
+            eulerLine: '#ffd866',
+            centroid: '#4a9eff',
+            circumcenter: '#7bed9f',
+            orthocenter: '#ff6b6b',
+            vertex: '#e8ece8',
+            text: '#e8ece8',
+            textDim: '#7a8a8a'
+        };
+
+        // Triangle vertices (in canvas coordinates)
+        let vertices = {
+            A: { x: 0, y: 0 },
+            B: { x: 0, y: 0 },
+            C: { x: 0, y: 0 }
+        };
+
+        // Interaction state
+        let dragging = null;
+        let currentStep = 0;
+
+        // Resize canvases
+        function resize() {
+            const container = mainCanvas.parentElement;
+            const rect = container.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+
+            gridCanvas.width = rect.width * dpr;
+            gridCanvas.height = rect.height * dpr;
+            gridCanvas.style.width = rect.width + 'px';
+            gridCanvas.style.height = rect.height + 'px';
+
+            mainCanvas.width = rect.width * dpr;
+            mainCanvas.height = rect.height * dpr;
+            mainCanvas.style.width = rect.width + 'px';
+            mainCanvas.style.height = rect.height + 'px';
+
+            gridCtx.scale(dpr, dpr);
+            ctx.scale(dpr, dpr);
+
+            // Initialize triangle if first time
+            if (vertices.A.x === 0 && vertices.A.y === 0) {
+                const cx = rect.width / 2;
+                const cy = rect.height / 2;
+                const size = Math.min(rect.width, rect.height) * 0.35;
+                
+                vertices.A = { x: cx, y: cy - size };
+                vertices.B = { x: cx - size * 0.9, y: cy + size * 0.7 };
+                vertices.C = { x: cx + size * 0.95, y: cy + size * 0.5 };
+            }
+
+            drawGrid();
+            draw();
+        }
+
+        // Draw grid background
+        function drawGrid() {
+            const w = gridCanvas.width / (window.devicePixelRatio || 1);
+            const h = gridCanvas.height / (window.devicePixelRatio || 1);
+            
+            gridCtx.fillStyle = '#111820';
+            gridCtx.fillRect(0, 0, w, h);
+
+            const gridSize = 30;
+            
+            // Minor grid
+            gridCtx.strokeStyle = colors.grid;
+            gridCtx.lineWidth = 0.5;
+            gridCtx.beginPath();
+            for (let x = 0; x <= w; x += gridSize) {
+                gridCtx.moveTo(x, 0);
+                gridCtx.lineTo(x, h);
+            }
+            for (let y = 0; y <= h; y += gridSize) {
+                gridCtx.moveTo(0, y);
+                gridCtx.lineTo(w, y);
+            }
+            gridCtx.stroke();
+
+            // Major grid
+            gridCtx.strokeStyle = colors.gridMajor;
+            gridCtx.lineWidth = 1;
+            gridCtx.beginPath();
+            for (let x = 0; x <= w; x += gridSize * 5) {
+                gridCtx.moveTo(x, 0);
+                gridCtx.lineTo(x, h);
+            }
+            for (let y = 0; y <= h; y += gridSize * 5) {
+                gridCtx.moveTo(0, y);
+                gridCtx.lineTo(w, y);
+            }
+            gridCtx.stroke();
+        }
+
+        // Geometry calculations
+        function midpoint(p1, p2) {
+            return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+        }
+
+        function centroid() {
+            return {
+                x: (vertices.A.x + vertices.B.x + vertices.C.x) / 3,
+                y: (vertices.A.y + vertices.B.y + vertices.C.y) / 3
+            };
+        }
+
+        function circumcenter() {
+            const ax = vertices.A.x, ay = vertices.A.y;
+            const bx = vertices.B.x, by = vertices.B.y;
+            const cx = vertices.C.x, cy = vertices.C.y;
+
+            const d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
+            if (Math.abs(d) < 1e-10) return null;
+
+            const ux = ((ax * ax + ay * ay) * (by - cy) + (bx * bx + by * by) * (cy - ay) + (cx * cx + cy * cy) * (ay - by)) / d;
+            const uy = ((ax * ax + ay * ay) * (cx - bx) + (bx * bx + by * by) * (ax - cx) + (cx * cx + cy * cy) * (bx - ax)) / d;
+
+            return { x: ux, y: uy };
+        }
+
+        function orthocenter() {
+            const ax = vertices.A.x, ay = vertices.A.y;
+            const bx = vertices.B.x, by = vertices.B.y;
+            const cx = vertices.C.x, cy = vertices.C.y;
+
+            // Altitude from A to BC
+            // Altitude from B to AC
+            // Find intersection
+
+            const bcX = cx - bx, bcY = cy - by;
+            const acX = cx - ax, acY = cy - ay;
+
+            const denom = bcX * acY - bcY * acX;
+            if (Math.abs(denom) < 1e-10) return null;
+
+            // Altitude from A: passes through A, perpendicular to BC
+            // Direction: (bcY, -bcX)
+            // Altitude from B: passes through B, perpendicular to AC
+            // Direction: (acY, -acX)
+
+            // A + t * (bcY, -bcX) = B + s * (acY, -acX)
+            // ax + t * bcY = bx + s * acY
+            // ay - t * bcX = by - s * acX
+
+            const t = ((bx - ax) * (-acX) - (by - ay) * acY) / (bcY * (-acX) - (-bcX) * acY);
+
+            return {
+                x: ax + t * bcY,
+                y: ay - t * bcX
+            };
+        }
+
+        // Line intersection with canvas bounds for extended lines
+        function extendLine(p1, p2, margin = 2000) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len < 1e-10) return [p1, p2];
+            
+            const ux = dx / len;
+            const uy = dy / len;
+            
+            return [
+                { x: p1.x - ux * margin, y: p1.y - uy * margin },
+                { x: p2.x + ux * margin, y: p2.y + uy * margin }
+            ];
+        }
+
+        // Perpendicular from point to line
+        function perpendicularFoot(point, lineP1, lineP2) {
+            const dx = lineP2.x - lineP1.x;
+            const dy = lineP2.y - lineP1.y;
+            const len2 = dx * dx + dy * dy;
+            if (len2 < 1e-10) return lineP1;
+            
+            const t = ((point.x - lineP1.x) * dx + (point.y - lineP1.y) * dy) / len2;
+            return {
+                x: lineP1.x + t * dx,
+                y: lineP1.y + t * dy
+            };
+        }
+
+        // Drawing functions
+        function drawLine(p1, p2, color, width = 1.5, dash = []) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.setLineDash(dash);
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function drawPoint(p, color, radius = 6, label = '', labelOffset = { x: 10, y: -10 }) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (label) {
+                ctx.fillStyle = color;
+                ctx.font = '600 14px "Source Serif 4", serif';
+                ctx.fillText(label, p.x + labelOffset.x, p.y + labelOffset.y);
+            }
+        }
+
+        function drawTriangle() {
+            ctx.strokeStyle = colors.triangle;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(vertices.A.x, vertices.A.y);
+            ctx.lineTo(vertices.B.x, vertices.B.y);
+            ctx.lineTo(vertices.C.x, vertices.C.y);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Vertex points and labels
+            drawPoint(vertices.A, colors.vertex, 7, 'A', { x: -5, y: -15 });
+            drawPoint(vertices.B, colors.vertex, 7, 'B', { x: -20, y: 15 });
+            drawPoint(vertices.C, colors.vertex, 7, 'C', { x: 10, y: 15 });
+        }
+
+        function drawMedians() {
+            const mBC = midpoint(vertices.B, vertices.C);
+            const mAC = midpoint(vertices.A, vertices.C);
+            const mAB = midpoint(vertices.A, vertices.B);
+
+            // Draw medians
+            drawLine(vertices.A, mBC, colors.median, 1.5, [6, 4]);
+            drawLine(vertices.B, mAC, colors.median, 1.5, [6, 4]);
+            drawLine(vertices.C, mAB, colors.median, 1.5, [6, 4]);
+
+            // Midpoint markers
+            ctx.fillStyle = colors.median;
+            [mBC, mAC, mAB].forEach(m => {
+                ctx.beginPath();
+                ctx.arc(m.x, m.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Centroid
+            const G = centroid();
+            drawPoint(G, colors.centroid, 8, 'G', { x: 10, y: 5 });
+        }
+
+        function drawPerpBisectors() {
+            const mBC = midpoint(vertices.B, vertices.C);
+            const mAC = midpoint(vertices.A, vertices.C);
+            const mAB = midpoint(vertices.A, vertices.B);
+
+            // Perpendicular bisector directions (perpendicular to each side)
+            const perpBC = { x: -(vertices.C.y - vertices.B.y), y: vertices.C.x - vertices.B.x };
+            const perpAC = { x: -(vertices.C.y - vertices.A.y), y: vertices.C.x - vertices.A.x };
+            const perpAB = { x: -(vertices.B.y - vertices.A.y), y: vertices.B.x - vertices.A.x };
+
+            // Normalize and extend
+            const len = 1000;
+            const norm = (v) => {
+                const l = Math.sqrt(v.x * v.x + v.y * v.y);
+                return { x: v.x / l, y: v.y / l };
+            };
+
+            const nBC = norm(perpBC);
+            const nAC = norm(perpAC);
+            const nAB = norm(perpAB);
+
+            drawLine(
+                { x: mBC.x - nBC.x * len, y: mBC.y - nBC.y * len },
+                { x: mBC.x + nBC.x * len, y: mBC.y + nBC.y * len },
+                colors.perpBisector, 1.5, [4, 4]
+            );
+            drawLine(
+                { x: mAC.x - nAC.x * len, y: mAC.y - nAC.y * len },
+                { x: mAC.x + nAC.x * len, y: mAC.y + nAC.y * len },
+                colors.perpBisector, 1.5, [4, 4]
+            );
+            drawLine(
+                { x: mAB.x - nAB.x * len, y: mAB.y - nAB.y * len },
+                { x: mAB.x + nAB.x * len, y: mAB.y + nAB.y * len },
+                colors.perpBisector, 1.5, [4, 4]
+            );
+
+            // Small perpendicular markers at midpoints
+            ctx.fillStyle = colors.perpBisector;
+            [mBC, mAC, mAB].forEach(m => {
+                ctx.beginPath();
+                ctx.arc(m.x, m.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Circumcenter
+            const O = circumcenter();
+            if (O) {
+                drawPoint(O, colors.circumcenter, 8, 'O', { x: 10, y: -10 });
+            }
+        }
+
+        function drawAltitudes() {
+            // Foot of altitude from each vertex
+            const footA = perpendicularFoot(vertices.A, vertices.B, vertices.C);
+            const footB = perpendicularFoot(vertices.B, vertices.A, vertices.C);
+            const footC = perpendicularFoot(vertices.C, vertices.A, vertices.B);
+
+            // Extend altitudes
+            const extA = extendLine(vertices.A, footA);
+            const extB = extendLine(vertices.B, footB);
+            const extC = extendLine(vertices.C, footC);
+
+            drawLine(extA[0], extA[1], colors.altitude, 1.5, [8, 4]);
+            drawLine(extB[0], extB[1], colors.altitude, 1.5, [8, 4]);
+            drawLine(extC[0], extC[1], colors.altitude, 1.5, [8, 4]);
+
+            // Foot markers
+            ctx.fillStyle = colors.altitude;
+            [footA, footB, footC].forEach(f => {
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Orthocenter
+            const H = orthocenter();
+            if (H) {
+                drawPoint(H, colors.orthocenter, 8, 'H', { x: 10, y: 15 });
+            }
+        }
+
+        function drawEulerLine() {
+            const O = circumcenter();
+            const H = orthocenter();
+            
+            if (O && H) {
+                const ext = extendLine(O, H);
+                drawLine(ext[0], ext[1], colors.eulerLine, 3);
+            }
+
+            // Redraw all three points on top
+            const G = centroid();
+            if (O) drawPoint(O, colors.circumcenter, 8, 'O', { x: 10, y: -10 });
+            drawPoint(G, colors.centroid, 8, 'G', { x: 10, y: 5 });
+            if (H) drawPoint(H, colors.orthocenter, 8, 'H', { x: 10, y: 15 });
+        }
+
+        function draw() {
+            const w = mainCanvas.width / (window.devicePixelRatio || 1);
+            const h = mainCanvas.height / (window.devicePixelRatio || 1);
+            ctx.clearRect(0, 0, w, h);
+
+            // Draw based on current step
+            if (currentStep >= 1) drawMedians();
+            if (currentStep >= 2) drawPerpBisectors();
+            if (currentStep >= 3) drawAltitudes();
+            if (currentStep >= 4) drawEulerLine();
+
+            // Always draw triangle last (on top)
+            drawTriangle();
+
+            // Update coordinates display
+            updateCoordinates();
+        }
+
+        function updateCoordinates() {
+            const format = (p) => `(${Math.round(p.x)}, ${Math.round(p.y)})`;
+            document.getElementById('coordA').textContent = format(vertices.A);
+            document.getElementById('coordB').textContent = format(vertices.B);
+            document.getElementById('coordC').textContent = format(vertices.C);
+        }
+
+        // Update info panel based on step
+        function updateInfoPanel() {
+            const panel = document.getElementById('infoPanel');
+            const legend = document.getElementById('legend');
+
+            const infos = [
+                {
+                    title: 'The Triangle',
+                    content: `<p>Drag the vertices <span class="highlight">A</span>, <span class="highlight">B</span>, <span class="highlight">C</span> to reshape the triangle.</p>
+                              <p>Click the steps above to construct the Euler Line piece by piece.</p>`,
+                    legend: `<div class="legend-item"><span class="legend-line" style="background: var(--triangle-stroke)"></span><span>Triangle edges</span></div>`
+                },
+                {
+                    title: 'The Centroid G',
+                    content: `<p>The <span class="highlight">centroid</span> is the intersection of the three <span style="color: var(--median-color)">medians</span>.</p>
+                              <p>A median connects each vertex to the midpoint of the opposite side.</p>
+                              <p>G divides each median in ratio <span class="highlight">2:1</span> from vertex to midpoint.</p>`,
+                    legend: `<div class="legend-item"><span class="legend-line" style="background: var(--median-color)"></span><span>Medians</span></div>
+                             <div class="legend-item"><span class="legend-point" style="background: var(--accent-blue)"></span><span>Centroid G</span></div>`
+                },
+                {
+                    title: 'The Circumcenter O',
+                    content: `<p>The <span class="highlight">circumcenter</span> is the intersection of the three <span style="color: var(--perp-bisector-color)">perpendicular bisectors</span>.</p>
+                              <p>Each ⊥ bisector passes through a side's midpoint, perpendicular to that side.</p>
+                              <p>O is equidistant from all three vertices (center of circumscribed circle).</p>`,
+                    legend: `<div class="legend-item"><span class="legend-line" style="background: var(--median-color)"></span><span>Medians</span></div>
+                             <div class="legend-item"><span class="legend-line" style="background: var(--perp-bisector-color)"></span><span>⊥ Bisectors</span></div>
+                             <div class="legend-item"><span class="legend-point" style="background: var(--accent-blue)"></span><span>Centroid G</span></div>
+                             <div class="legend-item"><span class="legend-point" style="background: var(--accent-green)"></span><span>Circumcenter O</span></div>`
+                },
+                {
+                    title: 'The Orthocenter H',
+                    content: `<p>The <span class="highlight">orthocenter</span> is the intersection of the three <span style="color: var(--altitude-color)">altitudes</span>.</p>
+                              <p>An altitude drops from each vertex perpendicular to the opposite side.</p>
+                              <p>H can lie inside (acute △), on (right △), or outside (obtuse △) the triangle.</p>`,
+                    legend: `<div class="legend-item"><span class="legend-line" style="background: var(--median-color)"></span><span>Medians</span></div>
+                             <div class="legend-item"><span class="legend-line" style="background: var(--perp-bisector-color)"></span><span>⊥ Bisectors</span></div>
+                             <div class="legend-item"><span class="legend-line" style="background: var(--altitude-color)"></span><span>Altitudes</span></div>
+                             <div class="legend-item"><span class="legend-point" style="background: var(--accent-blue)"></span><span>Centroid G</span></div>
+                             <div class="legend-item"><span class="legend-point" style="background: var(--accent-green)"></span><span>Circumcenter O</span></div>
+                             <div class="legend-item"><span class="legend-point" style="background: var(--accent-coral)"></span><span>Orthocenter H</span></div>`
+                },
+                {
+                    title: 'The Euler Line',
+                    content: `<p>The <span style="color: var(--euler-line-color)">Euler Line</span> passes through <span style="color: var(--accent-green)">O</span>, <span style="color: var(--accent-blue)">G</span>, and <span style="color: var(--accent-coral)">H</span>.</p>
+                              <p>Discovered by Leonhard Euler in 1765.</p>
+                              <div class="ratio-display">
+                                <p style="margin:0">The centroid divides OH in ratio:</p>
+                                <div class="formula">OG : GH = 1 : 2</div>
+                              </div>`,
+                    legend: `<div class="legend-item"><span class="legend-line" style="background: var(--euler-line-color); height: 3px"></span><span>Euler Line</span></div>
+                             <div class="legend-item"><span class="legend-point" style="background: var(--accent-green)"></span><span>Circumcenter O</span></div>
+                             <div class="legend-item"><span class="legend-point" style="background: var(--accent-blue)"></span><span>Centroid G</span></div>
+                             <div class="legend-item"><span class="legend-point" style="background: var(--accent-coral)"></span><span>Orthocenter H</span></div>`
+                }
+            ];
+
+            const info = infos[currentStep];
+            panel.innerHTML = `<h3>${info.title}</h3>${info.content}`;
+            legend.innerHTML = info.legend;
+        }
+
+        // Step navigation
+        function setStep(step) {
+            currentStep = Math.max(0, Math.min(4, step));
+            
+            document.querySelectorAll('.step-btn').forEach((btn, i) => {
+                btn.classList.remove('active', 'completed');
+                if (i < currentStep) btn.classList.add('completed');
+                if (i === currentStep) btn.classList.add('active');
+            });
+
+            updateInfoPanel();
+            draw();
+        }
+
+        // Event listeners
+        document.querySelectorAll('.step-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                setStep(parseInt(btn.dataset.step));
+            });
+        });
+
+        document.getElementById('prevBtn').addEventListener('click', () => setStep(currentStep - 1));
+        document.getElementById('nextBtn').addEventListener('click', () => setStep(currentStep + 1));
+
+        // Dragging
+        function getMousePos(e) {
+            const rect = mainCanvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        function findNearestVertex(pos) {
+            const threshold = 20;
+            let nearest = null;
+            let minDist = threshold;
+
+            for (const [name, v] of Object.entries(vertices)) {
+                const dist = Math.sqrt((pos.x - v.x) ** 2 + (pos.y - v.y) ** 2);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = name;
+                }
+            }
+            return nearest;
+        }
+
+        mainCanvas.addEventListener('mousedown', (e) => {
+            const pos = getMousePos(e);
+            dragging = findNearestVertex(pos);
+            if (dragging) {
+                mainCanvas.style.cursor = 'grabbing';
+            }
+        });
+
+        mainCanvas.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(e);
+            
+            if (dragging) {
+                vertices[dragging] = pos;
+                draw();
+            } else {
+                const nearest = findNearestVertex(pos);
+                mainCanvas.style.cursor = nearest ? 'grab' : 'crosshair';
+            }
+        });
+
+        mainCanvas.addEventListener('mouseup', () => {
+            dragging = null;
+            mainCanvas.style.cursor = 'crosshair';
+        });
+
+        mainCanvas.addEventListener('mouseleave', () => {
+            dragging = null;
+            mainCanvas.style.cursor = 'crosshair';
+        });
+
+        // Touch support
+        mainCanvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const pos = getMousePos(touch);
+            dragging = findNearestVertex(pos);
+        });
+
+        mainCanvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (dragging) {
+                const touch = e.touches[0];
+                const pos = getMousePos(touch);
+                vertices[dragging] = pos;
+                draw();
+            }
+        });
+
+        mainCanvas.addEventListener('touchend', () => {
+            dragging = null;
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                setStep(currentStep + 1);
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                setStep(currentStep - 1);
+            }
+        });
+
+        // Initialize
+        window.addEventListener('resize', () => {
+            resize();
+        });
+
+        resize();
+        updateInfoPanel();
+    </script>
+</body>
+</html>
